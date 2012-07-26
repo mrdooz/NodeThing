@@ -4,6 +4,7 @@ using System.Drawing;
 
 namespace NodeThing
 {
+    [Serializable()]
     public class Node
     {
         public Node()

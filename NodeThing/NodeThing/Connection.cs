@@ -5,6 +5,7 @@ using System.Text;
 
 namespace NodeThing
 {
+    [Serializable()]
     public class Connection
     {
         public Connection()

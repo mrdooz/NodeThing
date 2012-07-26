@@ -6,6 +6,7 @@ using System.Drawing;
 
 namespace NodeThing
 {
+    [Serializable()]
     public class Graph
     {
         void RenderRoot(GraphNode root, Graphics g)
@@ -90,6 +91,7 @@ namespace NodeThing
         List<Node> _nodes = new List<Node>();
     }
 
+    [Serializable()]
     public class GraphNode
     {
         public GraphNode(Node n)

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
+using System.Xml.Serialization;
+using System.IO;
 
 namespace NodeThing
 {
@@ -191,6 +193,25 @@ namespace NodeThing
         private void mainPanel_MouseDown(object sender, MouseEventArgs e)
         {
             _currentState = _currentState.MouseDown(sender, e);
+        }
+
+        private void saveToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var serializer = new XmlSerializer(typeof(Graph));
+            var streamWriter = new StreamWriter(@"c:\temp\tjong.xml");
+            serializer.Serialize(streamWriter, _graph);
+        }
+
+        private void loadToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var serializer = new XmlSerializer(typeof(Graph));
+            var fileStream = new FileStream(@"c:\temp\tjong.xml", FileMode.Open, FileAccess.Read, FileShare.Read);
+            _graph = (Graph)serializer.Deserialize(fileStream);
+        }
+
+        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Application.Exit();
         }
 
     }
