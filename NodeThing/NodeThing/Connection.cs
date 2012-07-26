@@ -14,7 +14,14 @@ namespace NodeThing
             kGeometry,
         }
 
+        public enum Io
+        {
+            kInput,
+            kOutput,
+        }
+
         public string name { get; set; }
         public Type type { get; set; }
+        public Io io { get; set; }
     }
 }

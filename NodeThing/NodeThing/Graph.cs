@@ -14,6 +14,28 @@ namespace NodeThing
             {
                 node.render(g);
             }
+            g.ResetTransform();
+        }
+
+        public Node pointInsideNode(Point pt)
+        {
+            foreach (var node in _nodes)
+            {
+                if (node.pointInsideBody(pt))
+                    return node;
+            }
+            return null;
+        }
+
+        public Connection pointInsideConnection(Point pt)
+        {
+            foreach (var node in _nodes)
+            {
+                var conn = node.pointInsideConnection(pt);
+                if (conn != null)
+                    return conn;
+            }
+            return null;
         }
 
         public void addNode(Node node)

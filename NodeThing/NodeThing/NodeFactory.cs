@@ -20,13 +20,17 @@ namespace NodeThing
             var node = new Node() { name = name, pos = pos };
             if (name == "Cube")
             {
-                node.output = new Connection { name = "Output", type = Connection.Type.kGeometry };
+                node.output = new Connection { name = "Output", type = Connection.Type.kGeometry, io = Connection.Io.kOutput };
                 return node;
             }
 
             if (name == "Array")
             {
-                node.inputs.Add(new Connection { name = "Input", type = Connection.Type.kGeometry });
+                node.inputs.Add(new Connection { name = "Input1", type = Connection.Type.kGeometry, io = Connection.Io.kInput });
+                node.inputs.Add(new Connection { name = "Input3-Input3-Input3", type = Connection.Type.kGeometry, io = Connection.Io.kInput });
+                node.inputs.Add(new Connection { name = "Input2", type = Connection.Type.kGeometry, io = Connection.Io.kInput });
+
+                node.output = new Connection { name = "Output", type = Connection.Type.kGeometry, io = Connection.Io.kOutput };
                 return node;
             }
 
