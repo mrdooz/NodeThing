@@ -136,7 +136,7 @@ namespace NodeThing
             }
         }
 
-        private NodeFactory _factory = new NodeFactory();
+        private NodeFactory _factory = new TextureFactory();
         private Graph _graph = new Graph();
         private string _createNode;
 

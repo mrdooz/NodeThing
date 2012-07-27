@@ -11,6 +11,7 @@ namespace NodeThing
         public Node()
         {
             Inputs = new List<Connection>();
+            Properties = new NodeProperties();
         }
 
         private int CalcWidth(Graphics g)
@@ -193,6 +194,9 @@ namespace NodeThing
 
         [DataMember]
         public Connection Output { get; set; }
+
+        [DataMember]
+        public NodeProperties Properties { get; set; }
 
         public bool Selected { get; set; }
 

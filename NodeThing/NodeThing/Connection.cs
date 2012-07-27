@@ -34,6 +34,7 @@ namespace NodeThing
             Int,
             Float,
             Geometry,
+            Texture,
         }
 
         public enum Io

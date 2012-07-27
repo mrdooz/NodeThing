@@ -99,6 +99,8 @@ namespace NodeThing
                         _form.ClearSelectedNodes();
                     }
 
+                    _form.propertyGrid1.SelectedObject = hitNode.Properties;
+
                     _form._selectedNodes.Add(hitNode);
                     hitNode.Selected = true;
                     _form.mainPanel.Invalidate();
