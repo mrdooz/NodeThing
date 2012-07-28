@@ -15,7 +15,7 @@ namespace NodeThing
     public partial class MainForm : Form
     {
 
-        [DllImport("TextureLib.dll", SetLastError = true)]
+        [DllImport("TextureLib.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
         private static extern void FillHwnd(IntPtr hwnd, int width, int height);
 
         private Type[] _knownTypes = { typeof(Size), typeof(Color) };

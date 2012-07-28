@@ -11,9 +11,7 @@ namespace NodeThing
 
         public TextureFactory()
         {
-            _nodeNames.Add("Solid");
-            _nodeNames.Add("Noise");
-
+            _nodeNames.AddRange(new [] { "Solid", "Noise"});
             _nodeNames.AddRange(new [] {"Add", "Sub", "Max", "Min"});
         }
 
