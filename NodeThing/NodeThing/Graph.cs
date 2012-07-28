@@ -121,10 +121,10 @@ namespace NodeThing
                     child.Node.Output.Used = false;
 
                     // Add the nodes to the roots list if needed
-                    if (parent.IsDisconnected() && _roots.FirstOrDefault(a => a == parent) == null)
+                    if (parent.IsRootNode() && _roots.FirstOrDefault(a => a == parent) == null)
                         _roots.Add(parent);
 
-                    if (child.IsDisconnected() && _roots.FirstOrDefault(a => a == child) == null)
+                    if (child.IsRootNode() && _roots.FirstOrDefault(a => a == child) == null)
                         _roots.Add(child);
 
                     return true;
@@ -152,6 +152,8 @@ namespace NodeThing
             foreach (var c in graphNode.Children) {
                 if (c != null) {
                     c.Parent = null;
+                    c.Node.Output.Used = false;
+                    _roots.Add(c);
                 }
             }
 
@@ -160,6 +162,7 @@ namespace NodeThing
                 for (var i = 0; i < graphNode.Parent.Children.Count(); ++i) {
                     if (graphNode.Parent.Children[i] == graphNode) {
                         graphNode.Parent.Children[i] = null;
+                        graphNode.Parent.Node.Inputs[i].Used = false;
                         break;
                     }
                 }
@@ -229,17 +232,10 @@ namespace NodeThing
             Children = new GraphNode[n.Inputs.Count];
         }
 
-        public bool IsDisconnected()
+        public bool IsRootNode()
         {
-            if (Parent != null)
-                return false;
-
-            for (var i = 0; i < Children.Count(); ++i) {
-                if (Children[i] != null)
-                    return false;
-            }
-
-            return true;
+            // A node is a root node if it doesn't have a parent
+            return Parent == null;
         }
 
         [DataMember]

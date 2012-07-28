@@ -13,6 +13,8 @@ namespace NodeThing
         {
             _nodeNames.Add("Solid");
             _nodeNames.Add("Noise");
+
+            _nodeNames.AddRange(new [] {"Add", "Sub", "Max", "Min"});
         }
 
         public override Node CreateNode(string name, Point pos)
@@ -35,6 +37,42 @@ namespace NodeThing
                 node.SetOutput("Output", Connection.Type.Texture);
                 node.AddProperty("Size", new Size(512, 512));
                 node.AddProperty("Seed", 10);
+                return node;
+            }
+
+            if (name == "Add") {
+                node.AddInput("A", Connection.Type.Texture);
+                node.AddInput("B", Connection.Type.Texture);
+                node.SetOutput("Output", Connection.Type.Texture);
+                node.AddProperty("Scale A", 10.0f);
+                node.AddProperty("Scale B", 10.0f);
+                return node;
+            }
+
+            if (name == "Sub") {
+                node.AddInput("A", Connection.Type.Texture);
+                node.AddInput("B", Connection.Type.Texture);
+                node.SetOutput("Output", Connection.Type.Texture);
+                node.AddProperty("Scale A", 10.0f);
+                node.AddProperty("Scale B", 10.0f);
+                return node;
+            }
+
+            if (name == "Max") {
+                node.AddInput("A", Connection.Type.Texture);
+                node.AddInput("B", Connection.Type.Texture);
+                node.SetOutput("Output", Connection.Type.Texture);
+                node.AddProperty("Scale A", 10.0f);
+                node.AddProperty("Scale B", 10.0f);
+                return node;
+            }
+
+            if (name == "Min") {
+                node.AddInput("A", Connection.Type.Texture);
+                node.AddInput("B", Connection.Type.Texture);
+                node.SetOutput("Output", Connection.Type.Texture);
+                node.AddProperty("Scale A", 10.0f);
+                node.AddProperty("Scale B", 10.0f);
                 return node;
             }
 
