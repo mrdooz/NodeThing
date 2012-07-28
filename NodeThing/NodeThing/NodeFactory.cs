@@ -11,7 +11,8 @@ namespace NodeThing
             _nodeNames.Add("Sink");
         }
 
-        abstract public Node CreateNode(string name, Point pos);
+        public abstract Node CreateNode(string name, Point pos);
+        public abstract void GenerateCode(GenerateSequence seq);
 
         public IEnumerable<String> NodeNames()
         {

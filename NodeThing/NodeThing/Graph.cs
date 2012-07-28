@@ -10,6 +10,12 @@ namespace NodeThing
     [DataContract]
     public class Graph
     {
+        [DataMember]
+        List<GraphNode> _roots = new List<GraphNode>();
+
+        [DataMember]
+        List<Node> _nodes = new List<Node>();
+
         void RenderNode(GraphNode root, Graphics g)
         {
             root.Node.Render(g);
@@ -216,16 +222,181 @@ namespace NodeThing
             _roots.RemoveAll(a => a == c);
         }
 
-        [DataMember]
-        List<GraphNode> _roots = new List<GraphNode>();
+        private CompNode CreateGraph(GraphNode root, CompNode parent, Dictionary<GraphNode, CompNode> nodes, ref List<CompNode> leaf)
+        {
+            CompNode node;
+            bool newNode = false;
 
-        [DataMember]
-        List<Node> _nodes = new List<Node>();
+            // Check if the node has already been added
+            if (!nodes.TryGetValue(root, out node)) {
+                node = new CompNode { Depth = 0, Node = root };
+                nodes.Add(root, node);
+                newNode = true;
+            } 
+            
+            if (parent != null)
+                node.Parents.Add(parent);
+
+            if (newNode) {
+                foreach (var c in root.Children) {
+                    if (c != null) {
+                        node.Children.Add(CreateGraph(c, node, nodes, ref leaf));
+                    }
+                }
+            }
+
+            if (node.Children.Count == 0)
+                leaf.Add(node);
+
+            return node;
+        }
+
+        private int SetDepth(CompNode root, CompNode parent)
+        {
+            // To get the topological sorting I want, we set the depth of each node to the max of its children
+            if (root.Children.Count == 0) {
+                root.Depth = parent == null ? 0 : parent.Depth + 1;
+            } else {
+                int d = 0;
+                foreach (var c in root.Children) {
+                    d = Math.Max(d, SetDepth(c, root));
+                }
+                root.Depth = d;
+            }
+            return root.Depth;
+        }
+
+        public List<CompNode> TopologicalSort(CompNode g, List<CompNode> leaf)
+        {
+            var res = new List<CompNode>();
+            var processed = new HashSet<CompNode>();
+            while (leaf.Count > 0) {
+
+                // pick the leaf with the greatest depth
+                leaf.Sort((a, b) => a.Depth > b.Depth ? -1 : 1);
+                var head = leaf[0];
+                res.Add(head);
+                leaf.RemoveAt(0);
+
+                processed.Add(head);
+                // Check if any of the head's parents are leaf now
+                foreach (var p in head.Parents) {
+                    bool isLeaf = true;
+                    foreach (var c in p.Children) {
+                        if (!processed.Contains(c)) {
+                            isLeaf = false;
+                            break;
+                        }
+                    }
+                    if (isLeaf)
+                        leaf.Add(p);
+                }
+
+            }
+            return res;
+        }
+
+        public List<GenerateSequence> GenerateCode()
+        {
+            var res = new List<GenerateSequence>();
+
+            // Create a graph from each node in the root-list that is a sink (actually from the sink's child)
+            foreach (var r in _roots) {
+                if (r.Node.IsSink() && r.Children[0] != null) {
+                    var nodes = new Dictionary<GraphNode, CompNode>();
+                    var leaf = new List<CompNode>();
+                    var g = CreateGraph(r.Children[0], null, nodes, ref leaf);
+                    SetDepth(g, null);
+                    var sorted = TopologicalSort(g, leaf);
+
+                    // Output the actuall processing and texture allocation
+                    var completedNodes = new HashSet<CompNode>();
+                    var textureCache = new List<int>();
+                    var nextTextureIdx = 0;
+
+                    var candidates = new List<Tuple<int, CompNode>>();
+
+                    var sequence = new List<Tuple<int, Node>>();
+
+                    foreach (var s in sorted) {
+                        // Allocate a texture for s
+                        int textureIdx;
+                        if (textureCache.Count > 0) {
+                            textureIdx = textureCache[0];
+                            textureCache.RemoveAt(0);
+                        } else {
+                            textureIdx = nextTextureIdx++;
+                        }
+
+                        var cur = new Tuple<int, CompNode>(textureIdx, s);
+                        sequence.Add(new Tuple<int, Node>(textureIdx, s.Node.Node));
+                        completedNodes.Add(s);
+
+                        // Check if any of the candidates have all their parents done, in which case they
+                        // can recycle their texture
+                        for (int i = 0; i < candidates.Count; ++i ) {
+                            var cand = candidates[i];
+                            bool safeToRemove = true;
+                            foreach (var p in cand.Item2.Parents) {
+                                if (!completedNodes.Contains(p)) {
+                                    safeToRemove = false;
+                                    break;
+                                }
+                            }
+                            if (safeToRemove) {
+                                textureCache.Add(cand.Item1);
+                                candidates.RemoveAt(i);
+                            }
+
+                        }
+
+                        candidates.Add(cur);
+                    }
+                    res.Add(new GenerateSequence() {Name = (string)r.Node.Properties["Name"].Value, NumTexture = nextTextureIdx, Sequence = sequence});
+                }
+            }
+            return res;
+        }
+    }
+
+    public class GenerateSequence
+    {
+        public GenerateSequence()
+        {
+            Sequence = new List<Tuple<int, Node>>();
+        }
+
+        public string Name { get; set; }
+        public List<Tuple<int, Node>> Sequence { get; set; }
+        public int NumTexture { get; set; }
+    }
+
+    public class CompNode
+    {
+        public CompNode()
+        {
+            Children = new List<CompNode>();
+            Parents = new List<CompNode>();
+        }
+
+        public GraphNode Node { get; set; }
+        public int Depth { get; set; }
+        public List<CompNode> Parents { get; set; }
+        public List<CompNode> Children { get; set; }
     }
 
     [DataContract(IsReference = true)]
     public class GraphNode
     {
+        [DataMember]
+        public Node Node { get; set; }
+
+        [DataMember]
+        public GraphNode Parent { get; set; }
+
+        [DataMember]
+        public GraphNode[] Children { get; private set; }
+
         public GraphNode(Node n)
         {
             Node = n;
@@ -237,14 +408,5 @@ namespace NodeThing
             // A node is a root node if it doesn't have a parent
             return Parent == null;
         }
-
-        [DataMember]
-        public Node Node { get; set; }
-
-        [DataMember]
-        public GraphNode Parent { get; set; }
-
-        [DataMember]
-        public GraphNode[] Children { get; private set; }
     }
 }

@@ -8,6 +8,41 @@ namespace NodeThing
     [DataContract(IsReference = true)]
     public class Node
     {
+        private Brush _blackBrush = new SolidBrush(Color.Black);
+        private Font _font = new Font("Arial", 7);
+
+        private static int _padding = 10;
+        private static int _connectionHeight = 25;
+        private static int _connectionRadius = 5;
+        private static int _connectionDiameter = 2 * _connectionRadius;
+        private static int _headerHeight = 20;
+        private int _width;
+        private int _height;
+        private bool _needsUpdate = true;
+
+        [DataMember]
+        public string Name { get; set; }
+
+        [DataMember]
+        public Point Pos { get; set; }
+
+        [DataMember]
+        public List<Connection> Inputs { get; set; }
+
+        [DataMember]
+        public Connection Output { get; set; }
+
+        [DataMember]
+        public Dictionary<string, Setting> Properties { get; set; }
+
+        public bool Selected { get; set; }
+
+        public bool IsSink()
+        {
+            return Name == "Sink";
+        }
+
+
         public Node()
         {
             Inputs = new List<Connection>();
@@ -198,33 +233,5 @@ namespace NodeThing
             }
         }
 
-        [DataMember]
-        public string Name { get; set; }
-
-        [DataMember]
-        public Point Pos { get; set; }
-
-        [DataMember]
-        public List<Connection> Inputs { get; set; }
-
-        [DataMember]
-        public Connection Output { get; set; }
-
-        [DataMember]
-        public Dictionary<string, Setting> Properties { get; set; }
-
-        public bool Selected { get; set; }
-
-        private Brush _blackBrush = new SolidBrush(Color.Black);
-        private Font _font = new Font("Arial", 7);
-
-        private static int _padding = 10;
-        private static int _connectionHeight = 25;
-        private static int _connectionRadius = 5;
-        private static int _connectionDiameter = 2 * _connectionRadius;
-        private static int _headerHeight = 20;
-        private int _width;
-        private int _height;
-        private bool _needsUpdate = true;
     }
 }

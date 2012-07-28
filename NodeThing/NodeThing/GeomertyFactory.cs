@@ -40,5 +40,10 @@ namespace NodeThing
 
             return null;
         }
+
+        public override void GenerateCode(GenerateSequence seq)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

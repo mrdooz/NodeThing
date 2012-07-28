@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Windows.Forms;
 using System.Xml;
@@ -14,9 +15,27 @@ namespace NodeThing
     public partial class MainForm : Form
     {
 
+        [DllImport("TextureLib.dll", SetLastError = true)]
+        private static extern void FillHwnd(IntPtr hwnd, int width, int height);
+
+        private Type[] _knownTypes = { typeof(Size), typeof(Color) };
+        private NodeFactory _factory = new TextureFactory();
+        private Graph _graph = new Graph();
+        private string _createNode;
+
+        private StateBase _currentState;
+
+        private List<Node> _selectedNodes = new List<Node>();
+        private List<Tuple<Connection, Connection>> _selectedConnections = new List<Tuple<Connection, Connection>>();
+
+        private DisplayForm _displayForm;
+
         public MainForm()
         {
             InitializeComponent();
+
+            _displayForm = new DisplayForm();
+            _displayForm.Show();
 
             foreach (var item in _factory.NodeNames())
                 nodeList.Items.Add(item);
@@ -136,14 +155,13 @@ namespace NodeThing
             }
         }
 
-        private Type[] _knownTypes = { typeof(Size), typeof(Color)};
-        private NodeFactory _factory = new TextureFactory();
-        private Graph _graph = new Graph();
-        private string _createNode;
-
-        private StateBase _currentState;
-
-        private List<Node> _selectedNodes = new List<Node>();
-        private List<Tuple<Connection,Connection>> _selectedConnections = new List<Tuple<Connection, Connection>>();
+        private void generateToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            FillHwnd(_displayForm.DisplayHandle(), 512, 512);
+            var code = _graph.GenerateCode();
+            foreach (var c in code) {
+                _factory.GenerateCode(c);
+            }
+        }
     }
 }
