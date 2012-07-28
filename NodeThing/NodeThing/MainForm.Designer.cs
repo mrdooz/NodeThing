@@ -36,7 +36,7 @@
             this.nodeList = new System.Windows.Forms.ListBox();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.splitContainer2 = new System.Windows.Forms.SplitContainer();
-            this.propertyGrid1 = new System.Windows.Forms.PropertyGrid();
+            this.propertyGrid1 = new CustomPropertyGrid();
             this.mainPanel = new NodeThing.DoublBufferedPanel();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
@@ -204,7 +204,7 @@
         private System.Windows.Forms.ToolStripMenuItem loadToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
         private System.Windows.Forms.SplitContainer splitContainer2;
-        private System.Windows.Forms.PropertyGrid propertyGrid1;
+        private CustomPropertyGrid propertyGrid1;
     }
 }
 

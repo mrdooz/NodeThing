@@ -24,6 +24,20 @@ namespace NodeThing
                 return node;
             }
 
+            if (name == "Solid") {
+                node.SetOutput("Output", Connection.Type.Texture);
+                node.AddProperty("Size", new Size(512, 512));
+                node.AddProperty("Color", Color.FromArgb(255, 128, 128, 128));
+                return node;
+            }
+
+            if (name == "Noise") {
+                node.SetOutput("Output", Connection.Type.Texture);
+                node.AddProperty("Size", new Size(512, 512));
+                node.AddProperty("Seed", 10);
+                return node;
+            }
+
             return null;
         }
     }

@@ -56,7 +56,7 @@ namespace NodeThing
         private void saveToolStripMenuItem_Click(object sender, EventArgs e)
         {
             try {
-                var ds = new DataContractSerializer(typeof(Graph));
+                var ds = new DataContractSerializer(typeof (Graph), _knownTypes);
                 var settings = new XmlWriterSettings() { Indent = true };
                 using (var x = XmlWriter.Create(@"c:\temp\tjong.xml", settings)) {
                     ds.WriteObject(x, _graph);
@@ -68,7 +68,7 @@ namespace NodeThing
 
         private void loadToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var ds = new DataContractSerializer(typeof(Graph));
+            var ds = new DataContractSerializer(typeof(Graph), _knownTypes);
             using (var fileStream = new FileStream(@"c:\temp\tjong.xml", FileMode.Open, FileAccess.Read, FileShare.Read)) {
                 _graph = (Graph)ds.ReadObject(fileStream);
             }
@@ -136,6 +136,7 @@ namespace NodeThing
             }
         }
 
+        private Type[] _knownTypes = { typeof(Size), typeof(Color)};
         private NodeFactory _factory = new TextureFactory();
         private Graph _graph = new Graph();
         private string _createNode;

@@ -11,7 +11,7 @@ namespace NodeThing
         public Node()
         {
             Inputs = new List<Connection>();
-            Properties = new NodeProperties();
+            Properties = new Dictionary<string, Setting>();
         }
 
         private int CalcWidth(Graphics g)
@@ -36,6 +36,11 @@ namespace NodeThing
         public void AddInput(string name, Connection.Type type)
         {
             Inputs.Add(new Connection { Name = name, DataType = type, Direction = Connection.Io.Input, Node = this, Slot = Inputs.Count });
+        }
+
+        public void AddProperty(string name, object defaultValue)
+        {
+            Properties[name] = new Setting { Value = defaultValue, Listener = OnPropertyChanged };
         }
 
         public void SetOutput(string name, Connection.Type type)
@@ -168,6 +173,11 @@ namespace NodeThing
             g.ResetTransform();
         }
 
+        private void OnPropertyChanged(object sender, EventArgs e)
+        {
+            
+        }
+
         [OnDeserialized]
         private void OnDeserializerd(StreamingContext sc)
         {
@@ -181,6 +191,11 @@ namespace NodeThing
             _headerHeight = 20;
 
             _needsUpdate = true;
+
+            // Set ourselves as listener to all our properties
+            foreach (var kv in Properties) {
+                kv.Value.Listener = OnPropertyChanged;
+            }
         }
 
         [DataMember]
@@ -196,7 +211,7 @@ namespace NodeThing
         public Connection Output { get; set; }
 
         [DataMember]
-        public NodeProperties Properties { get; set; }
+        public Dictionary<string, Setting> Properties { get; set; }
 
         public bool Selected { get; set; }
 
