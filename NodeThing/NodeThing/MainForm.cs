@@ -16,7 +16,9 @@ namespace NodeThing
     {
 
         [DllImport("TextureLib.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
-        private static extern void FillHwnd(IntPtr hwnd, int width, int height);
+        private static extern void RenderTexture(IntPtr hwnd, int width, int height, int numTextures, [MarshalAs(UnmanagedType.LPStr)]String name, int opCodeLen, char[] opCodes);
+
+        //private static extern void FillHwnd(IntPtr hwnd, int width, int height);
 
         private Type[] _knownTypes = { typeof(Size), typeof(Color) };
         private NodeFactory _factory = new TextureFactory();
@@ -157,10 +159,11 @@ namespace NodeThing
 
         private void generateToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            FillHwnd(_displayForm.DisplayHandle(), 512, 512);
             var code = _graph.GenerateCode();
             foreach (var c in code) {
-                _factory.GenerateCode(c);
+                var opCodes = _factory.GenerateCode(c);
+                var opCodeArray = opCodes.ToArray();
+                RenderTexture(_displayForm.DisplayHandle(), 512, 512, c.NumTexture, c.Name, opCodeArray.Count(), opCodeArray);
             }
         }
     }

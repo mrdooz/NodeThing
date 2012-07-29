@@ -10,8 +10,8 @@ namespace NodeThing
     {
         public GeometryFactory()
         {
-            _nodeNames.Add("Cube");
-            _nodeNames.Add("Array");
+            AddNodeName("Cube", 0);
+            AddNodeName("Array", 1);
         }
 
         public override Node CreateNode(string name, Point pos)
@@ -41,7 +41,7 @@ namespace NodeThing
             return null;
         }
 
-        public override void GenerateCode(GenerateSequence seq)
+        public override List<char> GenerateCode(GenerateSequence seq)
         {
             throw new NotImplementedException();
         }

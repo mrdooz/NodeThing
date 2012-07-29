@@ -5,20 +5,106 @@
 #include <stdint.h>
 
 typedef uint32_t uint32;
+typedef uint8_t uint8;
+
+HANDLE gHeapHandle;
 
 extern "C"
 {
-  void tjong();
+  struct Texture {
+    char *data;
+    int width;
+    int height;
+  };
 
+  Texture **g_textures = nullptr;
+
+  void source_solid(int dst_texture, uint32 color) {
+/*
+    Texture *texture = g_textures[dst_texture];
+    uint32 *p = (uint32 *)texture->data;
+    for (int i = 0; i < texture->height; ++i) {
+      for (int j = 0; j  < texture->width; ++j) {
+        *p++ = color;
+      }
+    }
+*/
+  }
+
+  void source_noise(int dst_texture) {
+  }
+
+  void modifier_add(int dst_texture) {
+
+  }
+
+  void modifier_sub(int dst_texture) {
+
+  }
+
+  void modifier_max(int dst_texture) {
+
+  }
+
+  void modifier_min(int dst_texture) {
+
+  }
+
+  static void *funcPtrs[] = {
+    &source_solid,
+    &source_noise,
+    &source_solid,
+    &modifier_add,
+    &modifier_sub,
+    &modifier_max,
+    &modifier_min
+  };
+
+/*
+  void tjong() {
+
+
+    _asm {
+      push  eax;
+      lea   eax, xx
+      push  10;
+      push  20;
+      call  [eax + 8];
+      add   esp, 8;
+      pop   eax;
+    }
+
+  }
+*/
   float bong(float a, float b, float c)
   {
     return a + b + c;
   }
 
-  __declspec(dllexport) void FillHwnd(HWND hwnd, int width, int height) {
+  __declspec(dllexport) void RenderTexture(HWND hwnd, int width, int height, int num_textures, const char *name, int opCodeLen, const char *opCodes) {
 
-    float xx = bong(10.0f, 20.0f, 30.0f);
-    tjong();
+    gHeapHandle = HeapCreate(HEAP_CREATE_ENABLE_EXECUTE, 32*1024, 128*1024);
+    uint8 *mem = (uint8 *)HeapAlloc(gHeapHandle, HEAP_ZERO_MEMORY, opCodeLen);
+    // push eax
+    mem[0] = 0x50;
+    // lea eax, funcPtrs
+    mem[1] = 0x8d;
+    mem[2] = 0x05;
+    *(uint32 *)&mem[3] = (uint32)&funcPtrs[0];
+
+    memcpy(mem + 7, opCodes, opCodeLen);
+
+    // pop eax
+    mem[7 + opCodeLen + 0] = 0x58;
+
+    // ret
+    mem[7 + opCodeLen + 1] = 0xc3;
+
+    _asm {
+      call [mem];
+    }
+
+    //tjong();
     HDC dc = GetDC(hwnd);
 
     BITMAPINFO bmi;
@@ -44,65 +130,7 @@ extern "C"
 
   }
 
-  //_nodeNames.AddRange(new [] { "Solid", "Noise"});
-  //_nodeNames.AddRange(new [] {"Add", "Sub", "Max", "Min"});
 
-  struct Texture {
-    char *data;
-    int width;
-    int height;
-  };
-
-  Texture **g_textures = nullptr;
-
-  __declspec(naked) void source_solid(int dst_texture, uint32 color) {
-    Texture *texture;
-    texture = g_textures[dst_texture];
-    uint32 *p;
-    p = (uint32 *)texture->data;
-    for (int i = 0; i < texture->height; ++i) {
-      for (int j = 0; j  < texture->width; ++j) {
-        *p++ = color;
-      }
-    }
-
-  }
-
-  __declspec(naked) void source_noise(int dst_texture) {
-  }
-
-  __declspec(naked) void modifier_add() {
-
-  }
-
-  __declspec(naked) void modifier_sub() {
-
-  }
-
-  __declspec(naked) void modifier_max() {
-
-  }
-
-  __declspec(naked) void modifier_min() {
-
-  }
-
-  void tjong() {
-    void *xx[] = {
-      &source_solid,
-      &source_noise,
-      &modifier_add,
-      &modifier_sub,
-      &modifier_max,
-      &modifier_min
-    };
-
-    _asm {
-      mov	eax, xx;
-      call	eax
-
-    }
-  }
 
 };
 
