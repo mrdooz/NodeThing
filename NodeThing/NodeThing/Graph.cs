@@ -16,6 +16,13 @@ namespace NodeThing
         [DataMember]
         List<Node> _nodes = new List<Node>();
 
+        public void SetPropertyListener(EventHandler h)
+        {
+            foreach (var n in _nodes) {
+                n.SetPropertyListener(h);
+            }
+        }
+
         void RenderNode(GraphNode root, Graphics g)
         {
             root.Node.Render(g);
@@ -281,13 +288,7 @@ namespace NodeThing
                 processed.Add(head);
                 // Check if any of the head's parents are leaf now
                 foreach (var p in head.Parents) {
-                    bool isLeaf = true;
-                    foreach (var c in p.Children) {
-                        if (!processed.Contains(c)) {
-                            isLeaf = false;
-                            break;
-                        }
-                    }
+                    bool isLeaf = p.Children.All(processed.Contains);
                     if (isLeaf)
                         leaf.Add(p);
                 }
@@ -296,78 +297,142 @@ namespace NodeThing
             return res;
         }
 
+        public GenerateSequence GenerateCodeFromSelected(Node selected, Size size, string name)
+        {
+            var root = FindNode(selected);
+            if (root == null)
+                return new GenerateSequence();
+            return GenerateCodeInner(root, size, name);
+        }
+
+        private GenerateSequence GenerateCodeInner(GraphNode root, Size size, string name)
+        {
+            var nodes = new Dictionary<GraphNode, CompNode>();
+            var leaf = new List<CompNode>();
+            var g = CreateGraph(root, null, nodes, ref leaf);
+            SetDepth(g, null);
+            var sorted = TopologicalSort(g, leaf);
+
+            // Output the actual processing and texture allocation
+            var completedNodes = new HashSet<CompNode>();
+            var textureCache = new List<int>();
+            var nextTextureIdx = 0;
+
+            var candidates = new List<Tuple<int, CompNode>>();
+
+            var sequence = new List<SequenceStep>();
+            var usedTextures = new Dictionary<CompNode, int>();
+
+            foreach (var s in sorted) {
+                // Allocate a texture for s
+                int textureIdx;
+                if (textureCache.Count > 0) {
+                    textureIdx = textureCache[0];
+                    textureCache.RemoveAt(0);
+                } else {
+                    textureIdx = nextTextureIdx++;
+                }
+
+                var cur = new Tuple<int, CompNode>(textureIdx, s);
+                var inputTextures = new List<int>();
+                foreach (var c in s.Children) {
+                    int texture;
+                    if (usedTextures.TryGetValue(c, out texture)) {
+                        inputTextures.Add(texture);
+                    }
+                }
+
+                sequence.Add(new SequenceStep { TextureIdx = textureIdx, Node = s.Node.Node, InputTextures = inputTextures });
+                completedNodes.Add(s);
+                usedTextures.Add(s, textureIdx);
+
+                // Check if any of the candidates have all their parents done, in which case they
+                // can recycle their texture
+                for (var i = 0; i < candidates.Count; ++i) {
+                    var cand = candidates[i];
+                    bool safeToRemove = cand.Item2.Parents.All(completedNodes.Contains);
+                    if (safeToRemove) {
+                        textureCache.Add(cand.Item1);
+                        candidates.RemoveAt(i);
+                    }
+
+                }
+
+                candidates.Add(cur);
+            }
+            return new GenerateSequence() { Name = name, NumTexture = nextTextureIdx, Sequence = sequence, Size = size };
+        }
+
+        private GraphNode FindSelectedChild(GraphNode node)
+        {
+            if (node.Node.Selected)
+                return node;
+
+            foreach (var c in node.Children) {
+                if (c != null) {
+                    var res = FindSelectedChild(c);
+                    if (res != null)
+                        return res;
+                }
+            }
+            return null;
+        }
+
         public List<GenerateSequence> GenerateCode()
         {
             var res = new List<GenerateSequence>();
 
             // Create a graph from each node in the root-list that is a sink (actually from the sink's child)
             foreach (var r in _roots) {
-                if (r.Node.IsSink() && r.Children[0] != null) {
-                    var nodes = new Dictionary<GraphNode, CompNode>();
-                    var leaf = new List<CompNode>();
-                    var g = CreateGraph(r.Children[0], null, nodes, ref leaf);
-                    SetDepth(g, null);
-                    var sorted = TopologicalSort(g, leaf);
 
-                    // Output the actuall processing and texture allocation
-                    var completedNodes = new HashSet<CompNode>();
-                    var textureCache = new List<int>();
-                    var nextTextureIdx = 0;
+                if (r.Node.IsSink()) {
+                    var root = r.Children[0];
+                    if (root != null) {
+                        var size = (Size)r.Node.Properties["Size"].Value;
+                        var name = (string)r.Node.Properties["Name"].Value;
+                        var selectedChild = FindSelectedChild(root);
 
-                    var candidates = new List<Tuple<int, CompNode>>();
-
-                    var sequence = new List<Tuple<int, Node>>();
-
-                    foreach (var s in sorted) {
-                        // Allocate a texture for s
-                        int textureIdx;
-                        if (textureCache.Count > 0) {
-                            textureIdx = textureCache[0];
-                            textureCache.RemoveAt(0);
-                        } else {
-                            textureIdx = nextTextureIdx++;
+                        var seq = GenerateCodeInner(root, size, name);
+                        seq.IsPreview = false;
+                        res.Add(seq);
+                        if (selectedChild != null) {
+                            var previewSeq = GenerateCodeInner(selectedChild, size, name);
+                            previewSeq.IsPreview = true;
+                            res.Add(previewSeq);
                         }
-
-                        var cur = new Tuple<int, CompNode>(textureIdx, s);
-                        sequence.Add(new Tuple<int, Node>(textureIdx, s.Node.Node));
-                        completedNodes.Add(s);
-
-                        // Check if any of the candidates have all their parents done, in which case they
-                        // can recycle their texture
-                        for (int i = 0; i < candidates.Count; ++i ) {
-                            var cand = candidates[i];
-                            bool safeToRemove = true;
-                            foreach (var p in cand.Item2.Parents) {
-                                if (!completedNodes.Contains(p)) {
-                                    safeToRemove = false;
-                                    break;
-                                }
-                            }
-                            if (safeToRemove) {
-                                textureCache.Add(cand.Item1);
-                                candidates.RemoveAt(i);
-                            }
-
-                        }
-
-                        candidates.Add(cur);
                     }
-                    res.Add(new GenerateSequence() {Name = (string)r.Node.Properties["Name"].Value, NumTexture = nextTextureIdx, Sequence = sequence});
+                } else {
+                    // Node isn't a proper sink, so we generate a preview
+                    var size = new Size(512, 512);
+                    var name = "Preview";
+                    var seq = GenerateCodeInner(r, size, name);
+                    res.Add(seq);
                 }
+
             }
             return res;
         }
+    }
+
+    public class SequenceStep
+    {
+        public int TextureIdx { get; set; }
+        public Node Node { get; set; }
+        public List<int> InputTextures { get; set; }
     }
 
     public class GenerateSequence
     {
         public GenerateSequence()
         {
-            Sequence = new List<Tuple<int, Node>>();
+            Sequence = new List<SequenceStep>();
         }
 
+        public bool IsPreview { get; set; }
+
+        public Size Size { get; set; }
         public string Name { get; set; }
-        public List<Tuple<int, Node>> Sequence { get; set; }
+        public List<SequenceStep> Sequence { get; set; }
         public int NumTexture { get; set; }
     }
 

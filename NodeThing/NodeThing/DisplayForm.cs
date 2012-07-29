@@ -20,5 +20,10 @@ namespace NodeThing
         {
             return displayPanel.Handle;
         }
+
+        public IntPtr PreviewHandle()
+        {
+            return previewPanel.Handle;
+        }
     }
 }

@@ -15,11 +15,6 @@ namespace NodeThing
     public partial class MainForm : Form
     {
 
-        [DllImport("TextureLib.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
-        private static extern void RenderTexture(IntPtr hwnd, int width, int height, int numTextures, [MarshalAs(UnmanagedType.LPStr)]String name, int opCodeLen, char[] opCodes);
-
-        //private static extern void FillHwnd(IntPtr hwnd, int width, int height);
-
         private Type[] _knownTypes = { typeof(Size), typeof(Color) };
         private NodeFactory _factory = new TextureFactory();
         private Graph _graph = new Graph();
@@ -43,6 +38,11 @@ namespace NodeThing
                 nodeList.Items.Add(item);
 
             _currentState = new DefaultState(this);
+        }
+
+        public void PropertyChanged(object sender, EventArgs args)
+        {
+            GenerateCode();
         }
 
         private void mainPanel_Paint(object sender, PaintEventArgs e)
@@ -92,6 +92,7 @@ namespace NodeThing
             var ds = new DataContractSerializer(typeof(Graph), _knownTypes);
             using (var fileStream = new FileStream(@"c:\temp\tjong.xml", FileMode.Open, FileAccess.Read, FileShare.Read)) {
                 _graph = (Graph)ds.ReadObject(fileStream);
+                _graph.SetPropertyListener(PropertyChanged);
             }
             mainPanel.Invalidate();
         }
@@ -113,6 +114,7 @@ namespace NodeThing
                 n.Selected = false;
             }
             _selectedNodes.Clear();
+            propertyGrid1.Settings = new Dictionary<string, Setting>();
         }
 
         protected void ClearSelectedConnections()
@@ -157,13 +159,35 @@ namespace NodeThing
             }
         }
 
+        protected void NodeSelected(Node node)
+        {
+            var seq = _graph.GenerateCodeFromSelected(node, new Size(512, 512), "Preview");
+            if (seq.Sequence.Count > 0)
+                _factory.GenerateCode(seq, _displayForm.PreviewHandle());
+        }
+
         private void generateToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            GenerateCode();
+        }
+
+        private void GenerateCode()
+        {
             var code = _graph.GenerateCode();
+            var displayedReal = false;
+            var displayedPreview = false;
             foreach (var c in code) {
-                var opCodes = _factory.GenerateCode(c);
-                var opCodeArray = opCodes.ToArray();
-                RenderTexture(_displayForm.DisplayHandle(), 512, 512, c.NumTexture, c.Name, opCodeArray.Count(), opCodeArray);
+                if (c.IsPreview) {
+                    if (!displayedPreview) {
+                        displayedPreview = true;
+                        _factory.GenerateCode(c, _displayForm.PreviewHandle());
+                    }
+                } else {
+                    if (!displayedReal) {
+                        displayedReal = true;
+                        _factory.GenerateCode(c, _displayForm.DisplayHandle());
+                    }
+                }
             }
         }
     }

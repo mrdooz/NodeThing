@@ -42,7 +42,6 @@ namespace NodeThing
             return Name == "Sink";
         }
 
-
         public Node()
         {
             Inputs = new List<Connection>();
@@ -75,7 +74,7 @@ namespace NodeThing
 
         public void AddProperty(string name, object defaultValue)
         {
-            Properties[name] = new Setting { Value = defaultValue, Listener = OnPropertyChanged };
+            Properties[name] = new Setting { Value = defaultValue };
         }
 
         public void SetOutput(string name, Connection.Type type)
@@ -208,9 +207,11 @@ namespace NodeThing
             g.ResetTransform();
         }
 
-        private void OnPropertyChanged(object sender, EventArgs e)
+        public void SetPropertyListener(EventHandler h)
         {
-            
+            foreach (var kv in Properties) {
+                kv.Value.Listener = h;
+            }
         }
 
         [OnDeserialized]
@@ -226,11 +227,6 @@ namespace NodeThing
             _headerHeight = 20;
 
             _needsUpdate = true;
-
-            // Set ourselves as listener to all our properties
-            foreach (var kv in Properties) {
-                kv.Value.Listener = OnPropertyChanged;
-            }
         }
 
     }

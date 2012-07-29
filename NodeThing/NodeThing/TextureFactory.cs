@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace NodeThing
@@ -9,8 +10,19 @@ namespace NodeThing
     class TextureFactory : NodeFactory
     {
 
+        [DllImport("TextureLib.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+        private static extern void renderTexture(IntPtr hwnd, int width, int height, int numTextures, int finalTexture, [MarshalAs(UnmanagedType.LPStr)]String name, int opCodeLen, byte[] opCodes);
+
+        [DllImport("TextureLib.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+        private static extern bool initTextureLib();
+
+        [DllImport("TextureLib.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+        private static extern bool closeTextureLib();
+
         public TextureFactory()
         {
+            initTextureLib();
+
             AddNodeName("Solid", 0);
             AddNodeName("Noise", 1);
 
@@ -47,8 +59,8 @@ namespace NodeThing
                 node.AddInput("A", Connection.Type.Texture);
                 node.AddInput("B", Connection.Type.Texture);
                 node.SetOutput("Output", Connection.Type.Texture);
-                node.AddProperty("Scale A", 10.0f);
-                node.AddProperty("Scale B", 10.0f);
+                node.AddProperty("Blend A", 1.0f);
+                node.AddProperty("Blend B", 1.0f);
                 return node;
             }
 
@@ -56,8 +68,8 @@ namespace NodeThing
                 node.AddInput("A", Connection.Type.Texture);
                 node.AddInput("B", Connection.Type.Texture);
                 node.SetOutput("Output", Connection.Type.Texture);
-                node.AddProperty("Scale A", 10.0f);
-                node.AddProperty("Scale B", 10.0f);
+                node.AddProperty("Blend A", 1.0f);
+                node.AddProperty("Blend B", 1.0f);
                 return node;
             }
 
@@ -65,8 +77,8 @@ namespace NodeThing
                 node.AddInput("A", Connection.Type.Texture);
                 node.AddInput("B", Connection.Type.Texture);
                 node.SetOutput("Output", Connection.Type.Texture);
-                node.AddProperty("Scale A", 10.0f);
-                node.AddProperty("Scale B", 10.0f);
+                node.AddProperty("Blend A", 1.0f);
+                node.AddProperty("Blend B", 1.0f);
                 return node;
             }
 
@@ -74,49 +86,69 @@ namespace NodeThing
                 node.AddInput("A", Connection.Type.Texture);
                 node.AddInput("B", Connection.Type.Texture);
                 node.SetOutput("Output", Connection.Type.Texture);
-                node.AddProperty("Scale A", 10.0f);
-                node.AddProperty("Scale B", 10.0f);
+                node.AddProperty("Blend A", 1.0f);
+                node.AddProperty("Blend B", 1.0f);
                 return node;
             }
 
             return null;
         }
 
-        private void AddPushInt32(Int32 value, ref List<char> opCodes)
+        private void AddPushInt32(Int32 value, ref List<byte> opCodes)
         {
-            opCodes.Add((char)0x68);
+            opCodes.Add(0x68);
             AddInt32(value, ref opCodes);
         }
 
-        private void AddPushInt16(Int16 value, ref List<char> opCodes)
+        private void AddPushFloat32(Single value, ref List<byte> opCodes)
         {
-            opCodes.Add((char)0x68);
+            opCodes.Add(0x68);
+            var bytes = BitConverter.GetBytes(value);
+            foreach (var b in bytes)
+                opCodes.Add(b);
+        }
+
+        private void AddPushInt16(Int16 value, ref List<byte> opCodes)
+        {
+            opCodes.Add(0x66);
+            opCodes.Add(0x68);
             AddInt16(value, ref opCodes);
         }
 
-        private void AddInt32(Int32 value, ref List<char> opCodes)
+
+        private void AddInt32(Int32 value, ref List<byte> opCodes)
         {
-            opCodes.Add((char)((value >>  0) & 0xff));
-            opCodes.Add((char)((value >>  8) & 0xff));
-            opCodes.Add((char)((value >> 16) & 0xff));
-            opCodes.Add((char)((value >> 24) & 0xff));
+            opCodes.Add((byte)((value >>  0) & 0xff));
+            opCodes.Add((byte)((value >>  8) & 0xff));
+            opCodes.Add((byte)((value >> 16) & 0xff));
+            opCodes.Add((byte)((value >> 24) & 0xff));
         }
 
-        private void AddInt16(Int16 value, ref List<char> opCodes)
+        private void AddInt16(Int16 value, ref List<byte> opCodes)
         {
-            opCodes.Add((char)((value >> 0) & 0xff));
-            opCodes.Add((char)((value >> 8) & 0xff));
+            opCodes.Add((byte)((value >> 0) & 0xff));
+            opCodes.Add((byte)((value >> 8) & 0xff));
         }
 
-        private void AddPopStack(Int32 amount, ref List<char> opCodes)
+        private void AddPopStack(Int32 amount, ref List<byte> opCodes)
         {
-            opCodes.Add((char)0x81);
-            opCodes.Add((char)0xc4);
+            opCodes.Add(0x81);
+            opCodes.Add(0xc4);
             AddInt32(amount, ref opCodes);
         }
 
-        private void CodeGen(int dstTexture, Node node, ref List<char> opCodes)
+        private void AddFunctionCall(Int32 functionId, ref List<byte> opCodes)
         {
+            // generate "call [eax + functionId*4]"
+            opCodes.Add(0xff);
+            opCodes.Add(0x90);
+            AddInt32(functionId * 4, ref opCodes);
+        }
+
+        private bool CodeGen(SequenceStep step, ref List<byte> opCodes)
+        {
+            var node = step.Node;
+            var dstTexture = step.TextureIdx;
             var name = node.Name;
 
             if (name == "Sink") {
@@ -126,19 +158,31 @@ namespace NodeThing
                 AddPushInt32(((Color)node.Properties["Color"].Value).ToArgb(), ref opCodes);
                 AddPushInt32(dstTexture, ref opCodes);
 
-                // generate "call [eax + nodeId*4]"
-                opCodes.Add((char)0xff);
-                opCodes.Add((char)0x90);
-                AddInt32(GetNodeId(node.Name)*4, ref opCodes);
+                AddFunctionCall(GetNodeId(node.Name), ref opCodes);
 
                 // pop stack
-                AddPopStack(8, ref opCodes);
+                AddPopStack(2*4, ref opCodes);
             }
 
             if (name == "Noise") {
             }
 
             if (name == "Add") {
+                if (step.InputTextures.Count != 2)
+                    return false;
+
+                var srcTexture1 = step.InputTextures[0];
+                var srcTexture2 = step.InputTextures[1];
+                // (dst, src1, scale 1, src2, scale 2)
+                AddPushFloat32((float)node.Properties["Blend B"].Value, ref opCodes);
+                AddPushInt32(srcTexture2, ref opCodes);
+                AddPushFloat32((float)node.Properties["Blend A"].Value, ref opCodes);
+                AddPushInt32(srcTexture1, ref opCodes);
+                AddPushInt32(dstTexture, ref opCodes);
+
+                AddFunctionCall(GetNodeId(node.Name), ref opCodes);
+
+                AddPopStack(5*4, ref opCodes);
             }
 
             if (name == "Sub") {
@@ -149,20 +193,29 @@ namespace NodeThing
 
             if (name == "Min") {
             }
-            
+
+            return true;
         }
 
-        public override List<char> GenerateCode(GenerateSequence seq)
+        public override void GenerateCode(GenerateSequence seq, IntPtr displayHandle)
         {
-            var res = new List<char>();
+            var opCodes = new List<byte>();
 
             foreach (var s in seq.Sequence) {
-                int dstTexture = s.Item1;
-                var node = s.Item2;
-                CodeGen(dstTexture, node, ref res);
+                // push eax
+                opCodes.Add(0x50);
+                if (!CodeGen(s, ref opCodes))
+                    return;
+                // pop eax
+                opCodes.Add(0x58);
             }
 
-            return res;
+            if (opCodes.Count > 0) {
+                var opCodeArray = opCodes.ToArray();
+                var finalTexture = seq.Sequence.LastOrDefault().TextureIdx;
+                renderTexture(displayHandle, seq.Size.Width, seq.Size.Height, seq.NumTexture, finalTexture, seq.Name, opCodeArray.Count(), opCodeArray);
+            }
+
         }
 
     }

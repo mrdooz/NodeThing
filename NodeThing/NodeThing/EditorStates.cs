@@ -104,6 +104,7 @@ namespace NodeThing
                     _form._selectedNodes.Add(hitNode);
                     hitNode.Selected = true;
                     _form.mainPanel.Invalidate();
+                    _form.NodeSelected(hitNode);
                     return this;
                 }
 

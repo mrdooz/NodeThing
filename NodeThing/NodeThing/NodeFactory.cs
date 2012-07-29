@@ -12,7 +12,7 @@ namespace NodeThing
         }
 
         public abstract Node CreateNode(string name, Point pos);
-        public abstract List<char> GenerateCode(GenerateSequence seq);
+        public abstract void GenerateCode(GenerateSequence seq, IntPtr displayHandle);
 
         public List<String> NodeNames()
         {
