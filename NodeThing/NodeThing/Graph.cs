@@ -297,9 +297,20 @@ namespace NodeThing
             return res;
         }
 
+
         public GenerateSequence GenerateCodeFromSelected(Node selected, Size size, string name)
         {
-            var root = FindNode(selected);
+            // If selecting a sink, use its child instead as sinks are really just sentinels..
+            GraphNode root;
+            if (selected.IsSink()) {
+                if (selected.Inputs.Count != 1)
+                    return new GenerateSequence();
+                size = selected.GetProperty<Size>("Size");
+                name = selected.GetProperty<string>("Name");
+                root = FindNode(selected).Children[0];
+            } else {
+                root = FindNode(selected);
+            }
             if (root == null)
                 return new GenerateSequence();
             return GenerateCodeInner(root, size, name);
@@ -388,8 +399,8 @@ namespace NodeThing
                 if (r.Node.IsSink()) {
                     var root = r.Children[0];
                     if (root != null) {
-                        var size = (Size)r.Node.Properties["Size"].Value;
-                        var name = (string)r.Node.Properties["Name"].Value;
+                        var size = r.Node.GetProperty<Size>("Size");
+                        var name = r.Node.GetProperty<string>("Name");
                         var selectedChild = FindSelectedChild(root);
 
                         var seq = GenerateCodeInner(root, size, name);

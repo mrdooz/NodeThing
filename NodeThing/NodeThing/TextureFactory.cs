@@ -30,6 +30,8 @@ namespace NodeThing
             AddNodeName("Sub", 3);
             AddNodeName("Max", 4);
             AddNodeName("Min", 5);
+
+            AddNodeName("Mul", 6);
         }
 
         public override Node CreateNode(string name, Point pos)
@@ -51,38 +53,11 @@ namespace NodeThing
 
             if (name == "Noise") {
                 node.SetOutput("Output", Connection.Type.Texture);
-                node.AddProperty("Seed", 10);
+                node.AddProperty("Scale", new Tuple<float, float>(5, 5), new Tuple<float, float>(1, 1), new Tuple<float, float>(25, 25));
                 return node;
             }
 
-            if (name == "Add") {
-                node.AddInput("A", Connection.Type.Texture);
-                node.AddInput("B", Connection.Type.Texture);
-                node.SetOutput("Output", Connection.Type.Texture);
-                node.AddProperty("Blend A", 1.0f);
-                node.AddProperty("Blend B", 1.0f);
-                return node;
-            }
-
-            if (name == "Sub") {
-                node.AddInput("A", Connection.Type.Texture);
-                node.AddInput("B", Connection.Type.Texture);
-                node.SetOutput("Output", Connection.Type.Texture);
-                node.AddProperty("Blend A", 1.0f);
-                node.AddProperty("Blend B", 1.0f);
-                return node;
-            }
-
-            if (name == "Max") {
-                node.AddInput("A", Connection.Type.Texture);
-                node.AddInput("B", Connection.Type.Texture);
-                node.SetOutput("Output", Connection.Type.Texture);
-                node.AddProperty("Blend A", 1.0f);
-                node.AddProperty("Blend B", 1.0f);
-                return node;
-            }
-
-            if (name == "Min") {
+            if (name == "Add" || name == "Sub" || name == "Mul" || name == "Max" || name == "Min") {
                 node.AddInput("A", Connection.Type.Texture);
                 node.AddInput("B", Connection.Type.Texture);
                 node.SetOutput("Output", Connection.Type.Texture);
@@ -155,7 +130,7 @@ namespace NodeThing
             }
 
             if (name == "Solid") {
-                AddPushInt32(((Color)node.Properties["Color"].Value).ToArgb(), ref opCodes);
+                AddPushInt32(node.GetProperty<Color>("Color").ToArgb(), ref opCodes);
                 AddPushInt32(dstTexture, ref opCodes);
 
                 AddFunctionCall(GetNodeId(node.Name), ref opCodes);
@@ -165,33 +140,35 @@ namespace NodeThing
             }
 
             if (name == "Noise") {
+                // (dst, scaleX, scaleY)
+                var scale = node.GetProperty<Tuple<float, float>>("Scale");
+                AddPushFloat32(scale.Item2, ref opCodes);
+                AddPushFloat32(scale.Item1, ref opCodes);
+                AddPushInt32(dstTexture, ref opCodes);
+
+                AddFunctionCall(GetNodeId(node.Name), ref opCodes);
+
+                // pop stack
+                AddPopStack(3 * 4, ref opCodes);
+
             }
 
-            if (name == "Add") {
+            if (name == "Add" || name == "Sub" || name == "Mul" || name == "Max" || name == "Min") {
                 if (step.InputTextures.Count != 2)
                     return false;
 
                 var srcTexture1 = step.InputTextures[0];
                 var srcTexture2 = step.InputTextures[1];
                 // (dst, src1, scale 1, src2, scale 2)
-                AddPushFloat32((float)node.Properties["Blend B"].Value, ref opCodes);
+                AddPushFloat32(node.GetProperty<float>("Blend B"), ref opCodes);
                 AddPushInt32(srcTexture2, ref opCodes);
-                AddPushFloat32((float)node.Properties["Blend A"].Value, ref opCodes);
+                AddPushFloat32(node.GetProperty<float>("Blend A"), ref opCodes);
                 AddPushInt32(srcTexture1, ref opCodes);
                 AddPushInt32(dstTexture, ref opCodes);
 
                 AddFunctionCall(GetNodeId(node.Name), ref opCodes);
 
                 AddPopStack(5*4, ref opCodes);
-            }
-
-            if (name == "Sub") {
-            }
-
-            if (name == "Max") {
-            }
-
-            if (name == "Min") {
             }
 
             return true;

@@ -33,7 +33,7 @@ namespace NodeThing
         public Connection Output { get; set; }
 
         [DataMember]
-        public Dictionary<string, Setting> Properties { get; set; }
+        public Dictionary<string, NodePropertyBase> Properties { get; set; }
 
         public bool Selected { get; set; }
 
@@ -45,7 +45,7 @@ namespace NodeThing
         public Node()
         {
             Inputs = new List<Connection>();
-            Properties = new Dictionary<string, Setting>();
+            Properties = new Dictionary<string, NodePropertyBase>();
         }
 
         private int CalcWidth(Graphics g)
@@ -72,9 +72,24 @@ namespace NodeThing
             Inputs.Add(new Connection { Name = name, DataType = type, Direction = Connection.Io.Input, Node = this, Slot = Inputs.Count });
         }
 
-        public void AddProperty(string name, object defaultValue)
+        public void AddProperty<T>(string name, T initialValue)
         {
-            Properties[name] = new Setting { Value = defaultValue };
+            Properties[name] = new NodeProperty<T>(initialValue);
+        }
+/*
+
+    {
+    
+}
+switch (defaultValue.GetType()) {
+                
+            }
+            Properties[name] = new NodeProperty<T> {Value = defaultValue};
+        }
+*/
+        public void AddProperty<T>(string name, T initialValue, T minValue, T maxValue)
+        {
+            Properties[name] = new NodeProperty<T>(initialValue, minValue, maxValue);
         }
 
         public void SetOutput(string name, Connection.Type type)
@@ -209,8 +224,30 @@ namespace NodeThing
 
         public void SetPropertyListener(EventHandler h)
         {
-            foreach (var kv in Properties) {
-                kv.Value.Listener = h;
+            //foreach (var kv in Properties) {
+                //kv.Value.Listener = h;
+            //}
+        }
+
+        public T GetProperty<T>(string key)
+        {
+            var p = Properties[key];
+            var np = p as NodeProperty<T>;
+            if (np != null) {
+                return np.Value;
+            } else {
+                throw new Exception("Invalid property: " + key);
+            }
+        }
+
+        public void SetProperty<T>(string key, T value)
+        {
+            var p = Properties[key];
+            var np = p as NodeProperty<T>;
+            if (np != null) {
+                np.Value = value;
+            } else {
+                throw new Exception("Invalid property: " + key);
             }
         }
 
@@ -228,6 +265,91 @@ namespace NodeThing
 
             _needsUpdate = true;
         }
+
+    }
+
+    public enum PropertyType
+    {
+        Float,
+        Float2,
+        Int,
+        Int2,
+        Color,
+
+        BoundedFloat,
+        BoundedFloat2,
+    }
+
+    [DataContract]
+    public class NodePropertyBase
+    {
+        [DataMember]
+        public bool IsBounded { get; set; }
+
+        [DataMember]
+        public PropertyType Type { get; protected set; }
+    }
+
+    [DataContract]
+    public class NodeProperty<T> : NodePropertyBase
+    {
+        [DataMember]
+        public T Value { get; set; }
+
+        [DataMember]
+        public T Min { get; set; }
+
+        [DataMember]
+        public T Max { get; set; }
+
+        public NodeProperty(T value)
+        {
+            Value = value;
+            IsBounded = false;
+            var t = typeof(T);
+            if (t == typeof(int)) {
+                Type = PropertyType.Int;
+            } else if (t == typeof(float)) {
+                Type = PropertyType.Float;
+            } else if (t == typeof(Tuple<float, float>)) {
+                Type = PropertyType.Float2;
+            } else if (t == typeof(Size)) {
+                Type = PropertyType.Int2;
+            } else if (t == typeof(Color)) {
+                Type = PropertyType.Color;
+            } else {
+                throw new Exception("Unhandled property type: " + value.GetType());
+            }
+        }
+
+        public NodeProperty(T value, T minValue, T maxValue)
+        {
+            Value = value;
+            Min = minValue;
+            Max = maxValue;
+            IsBounded = true;
+            var t = typeof(T);
+            if (t == typeof(int)) {
+                Type = PropertyType.Int;
+            } else if (t == typeof(float)) {
+                Type = PropertyType.Float;
+            } else if (t == typeof(Tuple<float, float>)) {
+                Type = PropertyType.Float2;
+            } else if (t == typeof(Size)) {
+                Type = PropertyType.Int2;
+            } else if (t == typeof(Color)) {
+                Type = PropertyType.Color;
+            } else {
+                throw new Exception("Unhandled property type: " + value.GetType());
+            }
+        }
+
+
+        public override string ToString()
+        {
+            return Value.ToString();
+        }
+
 
     }
 }

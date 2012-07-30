@@ -47,7 +47,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bounded2dValueEditor.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Bounded2dValueEditor.Designer.cs">
+      <DependentUpon>Bounded2dValueEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="Connection.cs" />
+    <Compile Include="BoundedValueEditor.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="BoundedValueEditor.Designer.cs">
+      <DependentUpon>BoundedValueEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="CustomPropertyGrid.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -59,6 +71,12 @@
     </Compile>
     <Compile Include="EditorStates.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UnboundedValueEditor.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="UnboundedValueEditor.Designer.cs">
+      <DependentUpon>UnboundedValueEditor.cs</DependentUpon>
     </Compile>
     <Compile Include="GeomertyFactory.cs" />
     <Compile Include="MainForm.cs">
@@ -78,8 +96,17 @@
     </Compile>
     <Compile Include="Setting.cs" />
     <Compile Include="TextureFactory.cs" />
+    <EmbeddedResource Include="Bounded2dValueEditor.resx">
+      <DependentUpon>Bounded2dValueEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="BoundedValueEditor.resx">
+      <DependentUpon>BoundedValueEditor.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="DisplayForm.resx">
       <DependentUpon>DisplayForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UnboundedValueEditor.resx">
+      <DependentUpon>UnboundedValueEditor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>

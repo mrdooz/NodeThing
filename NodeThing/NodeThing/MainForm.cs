@@ -1,21 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Windows.Forms;
 using System.Xml;
-using System.Xml.Serialization;
 using System.IO;
-using System.Linq;
 
 namespace NodeThing
 {
 
     public partial class MainForm : Form
     {
-
-        private Type[] _knownTypes = { typeof(Size), typeof(Color) };
+        private Type[] _knownTypes = {typeof (Size), typeof (Color), typeof (NodeProperty<float>), typeof (NodeProperty<string>), typeof (NodeProperty<Size>)};
         private NodeFactory _factory = new TextureFactory();
         private Graph _graph = new Graph();
         private string _createNode;
@@ -114,7 +110,6 @@ namespace NodeThing
                 n.Selected = false;
             }
             _selectedNodes.Clear();
-            propertyGrid1.Settings = new Dictionary<string, Setting>();
         }
 
         protected void ClearSelectedConnections()
@@ -161,6 +156,72 @@ namespace NodeThing
 
         protected void NodeSelected(Node node)
         {
+            flowLayoutPanel1.Controls.Clear();
+
+            foreach (var kv in node.Properties) {
+                var key = kv.Key;
+                var prop = kv.Value;
+
+                switch (prop.Type) {
+                    case PropertyType.Float:
+                        break;
+
+                    case PropertyType.Float2:
+                        var d = new EventHandler(delegate(object sender, EventArgs args) {
+                            var v = args as EventArgs<Tuple<float, float>>;
+                            if (v != null) {
+                                node.SetProperty(key, v.Value);
+                                GenerateCode();
+                            }
+                        });
+                        UserControl fe;
+                        if (prop.IsBounded) {
+                            fe = new Bounded2dValueEditor(prop, d);
+                        } else {
+                            fe = new UnboundedValueEditor(prop, d);
+                        }
+                        flowLayoutPanel1.Controls.Add(fe);
+                        break;
+
+                    case PropertyType.Color:
+                        break;
+
+                }
+            }
+/*
+                if (prop.Value.GetType() == typeof(BoundedNodeProperty<Tuple<float, float>>)) {
+                }
+
+                if (prop.Value.IsBounded()) {
+                    var fe = new BoundedValueEditor(prop.Value);
+                    fe.ValueChanged += delegate(object sender, EventArgs args)
+                    {
+                        var v = args as EventArgs<float>;
+                        if (v != null) {
+                            node.SetProperty(key, v.Value);
+                            GenerateCode();
+                        }
+                    };
+                    fe.Label.Text = prop.Key;
+                    flowLayoutPanel1.Controls.Add(fe);
+                    
+                } else {
+
+                    var fe = new UnboundedValueEditor();
+                    fe.ValueChanged += delegate(object sender, EventArgs args)
+                    {
+                        var v = args as EventArgs<float>;
+                        if (v != null) {
+                            node.SetProperty(key, v.Value);
+                            GenerateCode();
+                        }
+                    };
+                    fe.Label.Text = prop.Key;
+                    flowLayoutPanel1.Controls.Add(fe);
+                }
+            }
+*/
+
             var seq = _graph.GenerateCodeFromSelected(node, new Size(512, 512), "Preview");
             if (seq.Sequence.Count > 0)
                 _factory.GenerateCode(seq, _displayForm.PreviewHandle());
