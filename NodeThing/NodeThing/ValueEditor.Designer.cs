@@ -1,6 +1,6 @@
 ﻿namespace NodeThing
 {
-    partial class BoundedValueEditor
+    partial class ValueEditor
     {
         /// <summary> 
         /// Required designer variable.
@@ -29,14 +29,15 @@
         {
             this.drawPanel = new System.Windows.Forms.Panel();
             this.textBox = new System.Windows.Forms.TextBox();
-            this.Label = new System.Windows.Forms.Label();
+            this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
             // drawPanel
             // 
-            this.drawPanel.Location = new System.Drawing.Point(7, 20);
+            this.drawPanel.Location = new System.Drawing.Point(64, 19);
             this.drawPanel.Name = "drawPanel";
-            this.drawPanel.Size = new System.Drawing.Size(145, 20);
+            this.drawPanel.Size = new System.Drawing.Size(100, 20);
             this.drawPanel.TabIndex = 0;
             this.drawPanel.Paint += new System.Windows.Forms.PaintEventHandler(this.drawPanel_Paint);
             this.drawPanel.MouseDown += new System.Windows.Forms.MouseEventHandler(this.drawPanel_MouseDown);
@@ -44,32 +45,35 @@
             // 
             // textBox
             // 
-            this.textBox.Location = new System.Drawing.Point(158, 20);
+            this.textBox.Location = new System.Drawing.Point(6, 19);
             this.textBox.Name = "textBox";
-            this.textBox.Size = new System.Drawing.Size(68, 20);
+            this.textBox.Size = new System.Drawing.Size(50, 20);
             this.textBox.TabIndex = 1;
             this.textBox.TextChanged += new System.EventHandler(this.textBox_TextChanged);
             // 
-            // Label
+            // groupBox1
             // 
-            this.Label.AutoSize = true;
-            this.Label.Location = new System.Drawing.Point(4, 4);
-            this.Label.Name = "Label";
-            this.Label.Size = new System.Drawing.Size(35, 13);
-            this.Label.TabIndex = 2;
-            this.Label.Text = "label1";
+            this.groupBox1.Controls.Add(this.drawPanel);
+            this.groupBox1.Controls.Add(this.textBox);
+            this.groupBox1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.groupBox1.Location = new System.Drawing.Point(0, 0);
+            this.groupBox1.Name = "groupBox1";
+            this.groupBox1.Size = new System.Drawing.Size(170, 50);
+            this.groupBox1.TabIndex = 2;
+            this.groupBox1.TabStop = false;
+            this.groupBox1.Text = "groupBox1";
             // 
-            // BoundedValueEditor
+            // ValueEditor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.Controls.Add(this.Label);
-            this.Controls.Add(this.textBox);
-            this.Controls.Add(this.drawPanel);
-            this.Name = "BoundedValueEditor";
-            this.Size = new System.Drawing.Size(236, 47);
+            this.AutoSize = true;
+            this.Controls.Add(this.groupBox1);
+            this.Name = "ValueEditor";
+            this.Size = new System.Drawing.Size(170, 50);
+            this.groupBox1.ResumeLayout(false);
+            this.groupBox1.PerformLayout();
             this.ResumeLayout(false);
-            this.PerformLayout();
 
         }
 
@@ -77,6 +81,6 @@
 
         private System.Windows.Forms.Panel drawPanel;
         private System.Windows.Forms.TextBox textBox;
-        public System.Windows.Forms.Label Label;
+        private System.Windows.Forms.GroupBox groupBox1;
     }
 }

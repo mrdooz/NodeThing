@@ -47,18 +47,24 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Bounded2dValueEditor.cs">
+    <Compile Include="ColorEditor.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="Bounded2dValueEditor.Designer.cs">
-      <DependentUpon>Bounded2dValueEditor.cs</DependentUpon>
+    <Compile Include="ColorEditor.Designer.cs">
+      <DependentUpon>ColorEditor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ValueEditor2d.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="ValueEditor2d.Designer.cs">
+      <DependentUpon>ValueEditor2d.cs</DependentUpon>
     </Compile>
     <Compile Include="Connection.cs" />
-    <Compile Include="BoundedValueEditor.cs">
+    <Compile Include="ValueEditor.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="BoundedValueEditor.Designer.cs">
-      <DependentUpon>BoundedValueEditor.cs</DependentUpon>
+    <Compile Include="ValueEditor.Designer.cs">
+      <DependentUpon>ValueEditor.cs</DependentUpon>
     </Compile>
     <Compile Include="CustomPropertyGrid.cs">
       <SubType>Component</SubType>
@@ -71,12 +77,6 @@
     </Compile>
     <Compile Include="EditorStates.cs">
       <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="UnboundedValueEditor.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="UnboundedValueEditor.Designer.cs">
-      <DependentUpon>UnboundedValueEditor.cs</DependentUpon>
     </Compile>
     <Compile Include="GeomertyFactory.cs" />
     <Compile Include="MainForm.cs">
@@ -96,17 +96,17 @@
     </Compile>
     <Compile Include="Setting.cs" />
     <Compile Include="TextureFactory.cs" />
-    <EmbeddedResource Include="Bounded2dValueEditor.resx">
-      <DependentUpon>Bounded2dValueEditor.cs</DependentUpon>
+    <EmbeddedResource Include="ColorEditor.resx">
+      <DependentUpon>ColorEditor.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="BoundedValueEditor.resx">
-      <DependentUpon>BoundedValueEditor.cs</DependentUpon>
+    <EmbeddedResource Include="ValueEditor2d.resx">
+      <DependentUpon>ValueEditor2d.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ValueEditor.resx">
+      <DependentUpon>ValueEditor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="DisplayForm.resx">
       <DependentUpon>DisplayForm.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="UnboundedValueEditor.resx">
-      <DependentUpon>UnboundedValueEditor.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
@@ -129,6 +129,12 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ColorWheel\ColorWheel.csproj">
+      <Project>{14D66825-E906-45B1-865F-7CEB72BDC055}</Project>
+      <Name>ColorWheel</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

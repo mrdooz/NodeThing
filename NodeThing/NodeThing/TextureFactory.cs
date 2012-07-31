@@ -54,6 +54,7 @@ namespace NodeThing
             if (name == "Noise") {
                 node.SetOutput("Output", Connection.Type.Texture);
                 node.AddProperty("Scale", new Tuple<float, float>(5, 5), new Tuple<float, float>(1, 1), new Tuple<float, float>(25, 25));
+                node.AddProperty("Offset", new Tuple<float, float>(0, 0), new Tuple<float, float>(0, 0), new Tuple<float, float>(10, 10));
                 return node;
             }
 
@@ -61,8 +62,7 @@ namespace NodeThing
                 node.AddInput("A", Connection.Type.Texture);
                 node.AddInput("B", Connection.Type.Texture);
                 node.SetOutput("Output", Connection.Type.Texture);
-                node.AddProperty("Blend A", 1.0f);
-                node.AddProperty("Blend B", 1.0f);
+                node.AddProperty("Blend", new Tuple<float, float>(1, 1));
                 return node;
             }
 
@@ -160,9 +160,10 @@ namespace NodeThing
                 var srcTexture1 = step.InputTextures[0];
                 var srcTexture2 = step.InputTextures[1];
                 // (dst, src1, scale 1, src2, scale 2)
-                AddPushFloat32(node.GetProperty<float>("Blend B"), ref opCodes);
+                var blend = node.GetProperty<Tuple<float, float>>("Blend");
+                AddPushFloat32(blend.Item2, ref opCodes);
                 AddPushInt32(srcTexture2, ref opCodes);
-                AddPushFloat32(node.GetProperty<float>("Blend A"), ref opCodes);
+                AddPushFloat32(blend.Item1, ref opCodes);
                 AddPushInt32(srcTexture1, ref opCodes);
                 AddPushInt32(dstTexture, ref opCodes);
 

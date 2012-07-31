@@ -75,7 +75,7 @@ namespace NodeThing
         }
     }
     /// <summary>
-    /// A property grid that dynamically generates a Type to conform to desired input
+    /// A property grid that dynamically generates a PropertyType to conform to desired input
     /// </summary>
     public class CustomPropertyGrid : PropertyGrid
     {

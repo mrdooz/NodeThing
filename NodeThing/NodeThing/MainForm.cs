@@ -5,13 +5,18 @@ using System.Runtime.Serialization;
 using System.Windows.Forms;
 using System.Xml;
 using System.IO;
+using ColorWheel;
 
 namespace NodeThing
 {
 
     public partial class MainForm : Form
     {
-        private Type[] _knownTypes = {typeof (Size), typeof (Color), typeof (NodeProperty<float>), typeof (NodeProperty<string>), typeof (NodeProperty<Size>)};
+        private Type[] _knownTypes = {
+            typeof (Size), typeof (Color),
+            typeof (NodeProperty<float>), typeof (NodeProperty<string>), typeof (NodeProperty<Size>), typeof (NodeProperty<Color>),
+            typeof (NodeProperty<Tuple<float, float>>)
+        };
         private NodeFactory _factory = new TextureFactory();
         private Graph _graph = new Graph();
         private string _createNode;
@@ -22,6 +27,7 @@ namespace NodeThing
         private List<Tuple<Connection, Connection>> _selectedConnections = new List<Tuple<Connection, Connection>>();
 
         private DisplayForm _displayForm;
+        Timer _redrawTimer = new Timer();
 
         public MainForm()
         {
@@ -158,69 +164,50 @@ namespace NodeThing
         {
             flowLayoutPanel1.Controls.Clear();
 
+            var propertyChanged = new EventHandler(delegate {
+                // Limit the code gen to 10 fps
+                if (!_redrawTimer.Enabled) {
+                    _redrawTimer.Interval = 100;
+                    _redrawTimer.Tick += delegate
+                    {
+                        _redrawTimer.Stop();
+                        GenerateCode();
+                    };
+                    _redrawTimer.Start();
+                }
+            });
+
             foreach (var kv in node.Properties) {
                 var key = kv.Key;
                 var prop = kv.Value;
 
-                switch (prop.Type) {
+                switch (prop.PropertyType) {
                     case PropertyType.Float:
+                    case PropertyType.Int:
+                    case PropertyType.String: {
+                        var editor = new ValueEditor(key, prop, propertyChanged);
+                        flowLayoutPanel1.Controls.Add(editor);
                         break;
+                    }
 
                     case PropertyType.Float2:
-                        var d = new EventHandler(delegate(object sender, EventArgs args) {
-                            var v = args as EventArgs<Tuple<float, float>>;
-                            if (v != null) {
-                                node.SetProperty(key, v.Value);
-                                GenerateCode();
-                            }
-                        });
-                        UserControl fe;
-                        if (prop.IsBounded) {
-                            fe = new Bounded2dValueEditor(prop, d);
-                        } else {
-                            fe = new UnboundedValueEditor(prop, d);
-                        }
-                        flowLayoutPanel1.Controls.Add(fe);
+                    case PropertyType.Int2:
+                    case PropertyType.Size: {
+                        var editor = new ValueEditor2d(key, prop, propertyChanged);
+                        flowLayoutPanel1.Controls.Add(editor);
                         break;
+                    }
 
-                    case PropertyType.Color:
+
+                    case PropertyType.Color: {
+                        var editor = new ColorEditor(key, prop, propertyChanged);
+                        flowLayoutPanel1.Controls.Add(editor);
+
                         break;
-
+                    }
                 }
+
             }
-/*
-                if (prop.Value.GetType() == typeof(BoundedNodeProperty<Tuple<float, float>>)) {
-                }
-
-                if (prop.Value.IsBounded()) {
-                    var fe = new BoundedValueEditor(prop.Value);
-                    fe.ValueChanged += delegate(object sender, EventArgs args)
-                    {
-                        var v = args as EventArgs<float>;
-                        if (v != null) {
-                            node.SetProperty(key, v.Value);
-                            GenerateCode();
-                        }
-                    };
-                    fe.Label.Text = prop.Key;
-                    flowLayoutPanel1.Controls.Add(fe);
-                    
-                } else {
-
-                    var fe = new UnboundedValueEditor();
-                    fe.ValueChanged += delegate(object sender, EventArgs args)
-                    {
-                        var v = args as EventArgs<float>;
-                        if (v != null) {
-                            node.SetProperty(key, v.Value);
-                            GenerateCode();
-                        }
-                    };
-                    fe.Label.Text = prop.Key;
-                    flowLayoutPanel1.Controls.Add(fe);
-                }
-            }
-*/
 
             var seq = _graph.GenerateCodeFromSelected(node, new Size(512, 512), "Preview");
             if (seq.Sequence.Count > 0)

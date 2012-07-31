@@ -76,17 +76,7 @@ namespace NodeThing
         {
             Properties[name] = new NodeProperty<T>(initialValue);
         }
-/*
 
-    {
-    
-}
-switch (defaultValue.GetType()) {
-                
-            }
-            Properties[name] = new NodeProperty<T> {Value = defaultValue};
-        }
-*/
         public void AddProperty<T>(string name, T initialValue, T minValue, T maxValue)
         {
             Properties[name] = new NodeProperty<T>(initialValue, minValue, maxValue);
@@ -274,10 +264,10 @@ switch (defaultValue.GetType()) {
         Float2,
         Int,
         Int2,
+        Size,
         Color,
 
-        BoundedFloat,
-        BoundedFloat2,
+        String,
     }
 
     [DataContract]
@@ -287,7 +277,7 @@ switch (defaultValue.GetType()) {
         public bool IsBounded { get; set; }
 
         [DataMember]
-        public PropertyType Type { get; protected set; }
+        public PropertyType PropertyType { get; protected set; }
     }
 
     [DataContract]
@@ -302,24 +292,33 @@ switch (defaultValue.GetType()) {
         [DataMember]
         public T Max { get; set; }
 
+        private void SetPropertyType(T value)
+        {
+            var t = typeof(T);
+            if (t == typeof(int)) {
+                PropertyType = PropertyType.Int;
+            } else if (t == typeof(float)) {
+                PropertyType = PropertyType.Float;
+            } else if (t == typeof(Tuple<float, float>)) {
+                PropertyType = PropertyType.Float2;
+            } else if (t == typeof(Tuple<int, int>)) {
+                PropertyType = PropertyType.Int2;
+            } else if (t == typeof(Size)) {
+                PropertyType = PropertyType.Size;
+            } else if (t == typeof(Color)) {
+                PropertyType = PropertyType.Color;
+            } else if (t == typeof(String)) {
+                PropertyType = PropertyType.String;
+            } else {
+                throw new Exception("Unhandled property type: " + value.GetType());
+            }
+        }
+
         public NodeProperty(T value)
         {
             Value = value;
             IsBounded = false;
-            var t = typeof(T);
-            if (t == typeof(int)) {
-                Type = PropertyType.Int;
-            } else if (t == typeof(float)) {
-                Type = PropertyType.Float;
-            } else if (t == typeof(Tuple<float, float>)) {
-                Type = PropertyType.Float2;
-            } else if (t == typeof(Size)) {
-                Type = PropertyType.Int2;
-            } else if (t == typeof(Color)) {
-                Type = PropertyType.Color;
-            } else {
-                throw new Exception("Unhandled property type: " + value.GetType());
-            }
+            SetPropertyType(value);
         }
 
         public NodeProperty(T value, T minValue, T maxValue)
@@ -328,20 +327,7 @@ switch (defaultValue.GetType()) {
             Min = minValue;
             Max = maxValue;
             IsBounded = true;
-            var t = typeof(T);
-            if (t == typeof(int)) {
-                Type = PropertyType.Int;
-            } else if (t == typeof(float)) {
-                Type = PropertyType.Float;
-            } else if (t == typeof(Tuple<float, float>)) {
-                Type = PropertyType.Float2;
-            } else if (t == typeof(Size)) {
-                Type = PropertyType.Int2;
-            } else if (t == typeof(Color)) {
-                Type = PropertyType.Color;
-            } else {
-                throw new Exception("Unhandled property type: " + value.GetType());
-            }
+            SetPropertyType(value);
         }
 
 

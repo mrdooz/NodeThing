@@ -115,12 +115,13 @@
             this.nodeList.Location = new System.Drawing.Point(0, 0);
             this.nodeList.Margin = new System.Windows.Forms.Padding(2);
             this.nodeList.Name = "nodeList";
-            this.nodeList.Size = new System.Drawing.Size(192, 244);
+            this.nodeList.Size = new System.Drawing.Size(208, 242);
             this.nodeList.TabIndex = 1;
             this.nodeList.SelectedValueChanged += new System.EventHandler(this.nodeList_SelectedValueChanged);
             // 
             // splitContainer1
             // 
+            this.splitContainer1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.splitContainer1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.splitContainer1.Location = new System.Drawing.Point(0, 24);
             this.splitContainer1.Margin = new System.Windows.Forms.Padding(2);
@@ -134,12 +135,13 @@
             // 
             this.splitContainer1.Panel2.Controls.Add(this.mainPanel);
             this.splitContainer1.Size = new System.Drawing.Size(793, 486);
-            this.splitContainer1.SplitterDistance = 192;
+            this.splitContainer1.SplitterDistance = 210;
             this.splitContainer1.SplitterWidth = 3;
             this.splitContainer1.TabIndex = 2;
             // 
             // splitContainer2
             // 
+            this.splitContainer2.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.splitContainer2.Dock = System.Windows.Forms.DockStyle.Fill;
             this.splitContainer2.Location = new System.Drawing.Point(0, 0);
             this.splitContainer2.Name = "splitContainer2";
@@ -152,16 +154,18 @@
             // splitContainer2.Panel2
             // 
             this.splitContainer2.Panel2.Controls.Add(this.flowLayoutPanel1);
-            this.splitContainer2.Size = new System.Drawing.Size(192, 486);
+            this.splitContainer2.Size = new System.Drawing.Size(210, 486);
             this.splitContainer2.SplitterDistance = 244;
             this.splitContainer2.TabIndex = 0;
             // 
             // flowLayoutPanel1
             // 
+            this.flowLayoutPanel1.AutoScroll = true;
+            this.flowLayoutPanel1.AutoSize = true;
             this.flowLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.flowLayoutPanel1.Location = new System.Drawing.Point(0, 0);
             this.flowLayoutPanel1.Name = "flowLayoutPanel1";
-            this.flowLayoutPanel1.Size = new System.Drawing.Size(192, 238);
+            this.flowLayoutPanel1.Size = new System.Drawing.Size(208, 236);
             this.flowLayoutPanel1.TabIndex = 0;
             // 
             // mainPanel
@@ -172,7 +176,7 @@
             this.mainPanel.Location = new System.Drawing.Point(0, 0);
             this.mainPanel.Margin = new System.Windows.Forms.Padding(2);
             this.mainPanel.Name = "mainPanel";
-            this.mainPanel.Size = new System.Drawing.Size(598, 486);
+            this.mainPanel.Size = new System.Drawing.Size(578, 484);
             this.mainPanel.TabIndex = 0;
             this.mainPanel.TabStop = true;
             this.mainPanel.Paint += new System.Windows.Forms.PaintEventHandler(this.mainPanel_Paint);
@@ -202,6 +206,7 @@
             this.splitContainer1.ResumeLayout(false);
             this.splitContainer2.Panel1.ResumeLayout(false);
             this.splitContainer2.Panel2.ResumeLayout(false);
+            this.splitContainer2.Panel2.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer2)).EndInit();
             this.splitContainer2.ResumeLayout(false);
             this.ResumeLayout(false);
