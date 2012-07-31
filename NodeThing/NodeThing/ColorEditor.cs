@@ -28,6 +28,7 @@ namespace NodeThing
             cWheel.OnDrawSelector = HSVTriangle.DrawSelector;
             cWheel.OnCalculateSelectorColor = HSVTriangle.CalculateSelectorColor;
             cWheel.DisplayStyle = ColorWheelDisplayStyle.HSVTriangle;
+            cWheel.Color = ((NodeProperty<Color>)property).Value;
 
             cWheel.SelectedColorChanging += delegate(object sender, SelectedColorChangingEventArgs args) {
                 ((NodeProperty<Color>)_property).Value = args.Color;

@@ -1,14 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
 using System.Windows.Forms;
-using NodeThing;
 
 namespace NodeThing
 {
 
-    public partial class MainForm : Form
+    public partial class MainForm
     {
         private class StateBase
         {
@@ -17,7 +15,7 @@ namespace NodeThing
                 _form = form;
             }
 
-            public virtual void Render(Graphics g)
+            public virtual void Render(Graphics g, Point scrollOffset)
             {
             }
 
@@ -50,12 +48,18 @@ namespace NodeThing
             public override StateBase MouseMove(object sender, MouseEventArgs e)
             {
                 var pt = new Point(e.X, e.Y);
+                var scrolledPt = _form.PointToScrolled(pt);
 
                 if (_form._selectedNodes.Count > 0) {
                     // Start moving if the node we're clicking inside is in the selected list
-                    var hitNode = _form._graph.PointInsideNode(pt);
+                    var hitNode = _form.Settings.Graph.PointInsideNode(scrolledPt);
                     if (e.Button == MouseButtons.Left && hitNode != null && hitNode.Selected) {
                         return new MovingState(_form, pt);
+                    }
+                } else {
+                    // Start multiselect
+                    if (e.Button == MouseButtons.Left) {
+                        return new MultiSelectState(_form, pt);
                     }
                 }
 
@@ -65,12 +69,13 @@ namespace NodeThing
             public override StateBase MouseUp(object sender, MouseEventArgs e)
             {
                 var pt = new Point(e.X, e.Y);
+                var scrolledPt = _form.PointToScrolled(pt);
 
-                if (_form._graph.PointInsideNode(pt) == null) {
+                if (_form.Settings.Graph.PointInsideNode(scrolledPt) == null) {
                     // Create a new node
-                    var newNode = _form._factory.CreateNode(_form._createNode, pt);
+                    var newNode = _form._factory.CreateNode(_form._createNode, scrolledPt);
                     if (newNode != null) {
-                        _form._graph.AddNode(newNode);
+                        _form.Settings.Graph.AddNode(newNode);
                     }
                     _form.mainPanel.Invalidate();
                 }
@@ -81,18 +86,21 @@ namespace NodeThing
             public override StateBase MouseDown(object sender, MouseEventArgs e)
             {
                 var pt = new Point(e.X, e.Y);
+                var scrolledPt = _form.PointToScrolled(pt);
 
                 _form.ClearSelectedConnections();
 
                 // Check for selecting a connection
-                var hitConnection = _form._graph.PointInsideConnection(pt);
+                var hitConnection = _form.Settings.Graph.PointInsideConnection(scrolledPt);
                 if (hitConnection != null && (hitConnection.Direction == Connection.Io.Output || !hitConnection.Used)) {
                     _form.mainPanel.Invalidate();
-                    return new ClickedConnectionState(_form, hitConnection.Node.ConnectionPos(hitConnection.Direction, hitConnection.Slot).Item2, hitConnection);
+                    return new ClickedConnectionState(_form, 
+                        PointMath.Sub(hitConnection.Node.ConnectionPos(hitConnection.Direction, hitConnection.Slot).Item2, _form.Settings.ScrollOffset),
+                        hitConnection);
                 }
 
                 // Check for selecting a node
-                var hitNode = _form._graph.PointInsideNode(pt);
+                var hitNode = _form.Settings.Graph.PointInsideNode(scrolledPt);
                 if (hitNode != null) {
                     // ctrl-click for multiple select
                     if (ModifierKeys != Keys.Control && !hitNode.Selected) {
@@ -106,18 +114,24 @@ namespace NodeThing
                     return this;
                 }
 
+                _form.ClearSelectedNodes();
+
                 // Check for selecting a line between two connections
-                var conPair = _form._graph.PointOnConnection(pt);
+                var conPair = _form.Settings.Graph.PointOnConnection(scrolledPt);
                 if (conPair.Item1 != null && conPair.Item2 != null) {
                     conPair.Item1.Selected = true;
                     conPair.Item2.Selected = true;
                     // Note, the pair is (parent, child)
                     _form._selectedConnections.Add(conPair);
+                    return this;
                 }
 
-                _form.ClearSelectedNodes();
-                return this;
+                // Check for entering canvas resize mode
+                if (ModifierKeys == Keys.Shift) {
+                    return new ResizingState(_form, pt);
+                }
 
+                return this;
             }
         }
 
@@ -131,7 +145,7 @@ namespace NodeThing
                 _curPos = pt;
             }
 
-            public override void Render(Graphics g)
+            public override void Render(Graphics g, Point scrollOffset)
             {
                 var pen = new Pen(Color.Black, 2);
                 g.DrawLine(pen, StartPos, _curPos);
@@ -145,8 +159,9 @@ namespace NodeThing
                 }
 
                 _curPos = new Point(e.X, e.Y);
+                var scrolledPt = _form.PointToScrolled(_curPos);
 
-                var conn = _form._graph.PointInsideConnection(_curPos);
+                var conn = _form.Settings.Graph.PointInsideConnection(scrolledPt);
                 if (conn != null && conn != Start) {
                     _prevHover = conn;
                     if (Start.LegalConnection(conn)) {
@@ -167,7 +182,9 @@ namespace NodeThing
                 }
 
                 var pt = new Point(e.X, e.Y);
-                var end = _form._graph.PointInsideConnection(pt);
+                var scrolledPt = _form.PointToScrolled(pt);
+
+                var end = _form.Settings.Graph.PointInsideConnection(scrolledPt);
                 if (end == null) {
                     _form.mainPanel.Invalidate();
                     return new DefaultState(_form);
@@ -180,7 +197,7 @@ namespace NodeThing
                     var child = Start.Direction == Connection.Io.Output ? Start : end;
                     parent.Used = true;
                     child.Used = true;
-                    _form._graph.AddConnection(parent.Node, parent.Slot, child.Node, child.Slot);
+                    _form.Settings.Graph.AddConnection(parent.Node, parent.Slot, child.Node, child.Slot);
                 }
 
                 _form.mainPanel.Invalidate();
@@ -188,8 +205,8 @@ namespace NodeThing
             }
 
             private Point _curPos;
-            public Point StartPos { get; set; }
-            public Connection Start { get; set; }
+            private Point StartPos { get; set; }
+            private Connection Start { get; set; }
             private Connection _prevHover;
         }
 
@@ -225,6 +242,67 @@ namespace NodeThing
 
             private Point _startPos;
             private List<Tuple<Node, Point>> _startingNodePositions = new List<Tuple<Node, Point>>();
+        }
+
+        private class ResizingState : StateBase
+        {
+            private Point _startPos;
+            private Size _orgSize;
+
+            public ResizingState(MainForm form, Point startPos) : base(form)
+            {
+                _startPos = startPos;
+                _orgSize = _form.mainPanel.AutoScrollMinSize;
+            }
+
+            public override StateBase MouseUp(object sender, MouseEventArgs e)
+            {
+                return new DefaultState(_form);
+            }
+
+            public override StateBase MouseMove(object sender, MouseEventArgs e)
+            {
+                int dx = Math.Abs(e.X - _startPos.X);
+                int dy = Math.Abs(e.Y - _startPos.Y);
+
+                _form.UpdateCanvasSize(_orgSize.Width + dx, _orgSize.Height + dy, e.X - _startPos.X, e.Y - _startPos.Y);
+
+                return this;
+            }
+        }
+
+        private class MultiSelectState : StateBase
+        {
+            private Point _startPos;
+
+            public MultiSelectState(MainForm form, Point startPos) : base(form)
+            {
+                _startPos = startPos;
+            }
+
+            public override StateBase MouseUp(object sender, MouseEventArgs e)
+            {
+                var pt = new Point(e.X, e.Y);
+                _form.MultiSelect(PointMath.Min(_startPos, pt), PointMath.Max(_startPos, pt));
+
+                _form.mainPanel.Invalidate();
+                return new DefaultState(_form);
+            }
+
+            public override StateBase MouseMove(object sender, MouseEventArgs e)
+            {
+                _form.mainPanel.Invalidate();
+                return this;
+            }
+
+            public override void Render(Graphics g, Point scrollOffset)
+            {
+                var pen = new Pen(Color.Black, 2);
+                var pt = _form.mainPanel.PointToClient(MousePosition);
+                var tl = PointMath.Min(pt, _startPos);
+                var br = PointMath.Max(pt, _startPos);
+                g.DrawRectangle(pen, tl.X, tl.Y, br.X - tl.X, br.Y - tl.Y);
+            }
         }
     }
 }

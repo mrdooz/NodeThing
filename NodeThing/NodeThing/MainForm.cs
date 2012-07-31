@@ -12,13 +12,13 @@ namespace NodeThing
 
     public partial class MainForm : Form
     {
-        private Type[] _knownTypes = {
+        private readonly Type[] _knownTypes = {
             typeof (Size), typeof (Color),
             typeof (NodeProperty<float>), typeof (NodeProperty<string>), typeof (NodeProperty<Size>), typeof (NodeProperty<Color>),
             typeof (NodeProperty<Tuple<float, float>>)
         };
+
         private NodeFactory _factory = new TextureFactory();
-        private Graph _graph = new Graph();
         private string _createNode;
 
         private StateBase _currentState;
@@ -27,7 +27,27 @@ namespace NodeThing
         private List<Tuple<Connection, Connection>> _selectedConnections = new List<Tuple<Connection, Connection>>();
 
         private DisplayForm _displayForm;
-        Timer _redrawTimer = new Timer();
+        private Timer _redrawTimer = new Timer();
+
+        [DataContract]
+        public class InstanceSettings
+        {
+            public InstanceSettings()
+            {
+                Graph = new Graph();
+            }
+
+            [DataMember]
+            public Graph Graph { get; set; }
+
+            [DataMember]
+            public Size CanvasSize { get; set; }
+
+            [DataMember]
+            public Point ScrollOffset { get; set; }
+        }
+
+        public InstanceSettings Settings { get; private set; }
 
         public MainForm()
         {
@@ -40,6 +60,10 @@ namespace NodeThing
                 nodeList.Items.Add(item);
 
             _currentState = new DefaultState(this);
+
+            mainPanel.AutoScrollMinSize = mainPanel.Size;
+
+            Settings = new InstanceSettings();
         }
 
         public void PropertyChanged(object sender, EventArgs args)
@@ -51,9 +75,9 @@ namespace NodeThing
         {
             var g = e.Graphics;
             var brush = new SolidBrush(mainPanel.BackColor);
-            _graph.Render(g);
+            Settings.Graph.Render(g, Settings.ScrollOffset);
 
-            _currentState.Render(g);
+            _currentState.Render(g, Settings.ScrollOffset);
         }
 
         private void nodeList_SelectedValueChanged(object sender, EventArgs e)
@@ -82,7 +106,7 @@ namespace NodeThing
                 var ds = new DataContractSerializer(typeof (Graph), _knownTypes);
                 var settings = new XmlWriterSettings() { Indent = true };
                 using (var x = XmlWriter.Create(@"c:\temp\tjong.xml", settings)) {
-                    ds.WriteObject(x, _graph);
+                    ds.WriteObject(x, Settings.Graph);
                 }
             } catch (IOException) {
 
@@ -93,9 +117,10 @@ namespace NodeThing
         {
             var ds = new DataContractSerializer(typeof(Graph), _knownTypes);
             using (var fileStream = new FileStream(@"c:\temp\tjong.xml", FileMode.Open, FileAccess.Read, FileShare.Read)) {
-                _graph = (Graph)ds.ReadObject(fileStream);
-                _graph.SetPropertyListener(PropertyChanged);
+                Settings.Graph = (Graph)ds.ReadObject(fileStream);
+                Settings.Graph.SetPropertyListener(PropertyChanged);
             }
+            mainPanel.AutoScrollMinSize = Settings.CanvasSize;
             mainPanel.Invalidate();
         }
 
@@ -143,14 +168,14 @@ namespace NodeThing
                         var res = MessageBox.Show("Are you sure you want to delete the selected node(s)?", "Delete node?", MessageBoxButtons.YesNoCancel);
                         if (res == DialogResult.Yes) {
                             foreach (var n in _selectedNodes) {
-                                _graph.DeleteNode(n);
+                                Settings.Graph.DeleteNode(n);
                             }
                             ClearSelectedNodes();
                             mainPanel.Invalidate();
                         }
                     } else if (_selectedConnections.Count > 0) {
                         foreach (var c in _selectedConnections) {
-                            _graph.DeleteConnection(c.Item1, c.Item2);
+                            Settings.Graph.DeleteConnection(c.Item1, c.Item2);
                         }
                         ClearSelectedConnections();
                         mainPanel.Invalidate();
@@ -209,7 +234,7 @@ namespace NodeThing
 
             }
 
-            var seq = _graph.GenerateCodeFromSelected(node, new Size(512, 512), "Preview");
+            var seq = Settings.Graph.GenerateCodeFromSelected(node, new Size(512, 512), "Preview");
             if (seq.Sequence.Count > 0)
                 _factory.GenerateCode(seq, _displayForm.PreviewHandle());
         }
@@ -221,7 +246,7 @@ namespace NodeThing
 
         private void GenerateCode()
         {
-            var code = _graph.GenerateCode();
+            var code = Settings.Graph.GenerateCode();
             var displayedReal = false;
             var displayedPreview = false;
             foreach (var c in code) {
@@ -238,5 +263,37 @@ namespace NodeThing
                 }
             }
         }
+
+        private void mainPanel_Scroll(object sender, ScrollEventArgs e)
+        {
+            Settings.ScrollOffset = e.ScrollOrientation == ScrollOrientation.HorizontalScroll
+                ? new Point(e.NewValue, Settings.ScrollOffset.Y) : new Point(Settings.ScrollOffset.X, e.NewValue);
+            mainPanel.Invalidate();
+        }
+
+        public Point PointToScrolled(Point pt)
+        {
+            // convert a point in client space to a point in virtual mainPanel space
+            return new Point(pt.X + Settings.ScrollOffset.X, pt.Y + Settings.ScrollOffset.Y);
+        }
+
+        public void MultiSelect(Point topLeft, Point bottomRight)
+        {
+            var tl = PointMath.Add(topLeft, Settings.ScrollOffset);
+            var rel = PointMath.Sub(bottomRight, topLeft);
+            var rect = new Rectangle(PointMath.Add(topLeft, Settings.ScrollOffset), new Size(rel.X, rel.Y));
+            foreach (var n in Settings.Graph.NodesInsideRect(rect)) {
+                n.Selected = true;
+                _selectedNodes.Add(n);
+            }
+        }
+
+        public void UpdateCanvasSize(int width, int height, int dx, int dy)
+        {
+            Settings.CanvasSize = new Size(width, height);
+            mainPanel.AutoScrollMinSize = Settings.CanvasSize;
+            mainPanel.HorizontalScroll.Value = dx;
+        }
+
     }
 }

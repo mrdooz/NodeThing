@@ -23,12 +23,12 @@ namespace NodeThing
             }
         }
 
-        void RenderNode(GraphNode root, Graphics g)
+        void RenderNode(GraphNode root, Graphics g, Point scrollOffset)
         {
-            root.Node.Render(g);
+            root.Node.Render(g, scrollOffset);
             foreach (var child in root.Children) {
                 if (child != null) {
-                    RenderNode(child, g);
+                    RenderNode(child, g, scrollOffset);
                 }
             }
 
@@ -44,20 +44,34 @@ namespace NodeThing
                 var cp0 = root.Node.ConnectionPos(Connection.Io.Input, i);
                 var cp1 = child.Node.ConnectionPos(Connection.Io.Output, 0);
                 if (cp0.Item1 && cp1.Item1) {
-                    g.DrawLine(root.Node.Inputs[i].Selected && child.Node.Output.Selected ? selectedPen : pen, cp0.Item2, cp1.Item2);
+                    var scrolledCp0 = new Point(cp0.Item2.X - scrollOffset.X, cp0.Item2.Y - scrollOffset.Y);
+                    var scrolledCp1 = new Point(cp1.Item2.X - scrollOffset.X, cp1.Item2.Y - scrollOffset.Y);
+                    g.DrawLine(root.Node.Inputs[i].Selected && child.Node.Output.Selected ? selectedPen : pen, scrolledCp0, scrolledCp1);
                 }
             }
         }
 
-        public void Render(Graphics g)
+        public void Render(Graphics g, Point scrollOffset)
         {
             foreach (var r in _roots)
-                RenderNode(r, g);
+                RenderNode(r, g, scrollOffset);
         }
 
         public Node PointInsideNode(Point pt)
         {
             return _nodes.FirstOrDefault(node => node.PointInsideBody(pt));
+        }
+
+        public List<Node> NodesInsideRect(Rectangle rect)
+        {
+            var res = new List<Node>();
+            foreach (var n in _nodes) {
+                var boundingRect = n.BoundingRect();
+                if (rect.IntersectsWith(boundingRect))
+                    res.Add(n);
+
+            }
+            return res;
         }
 
         public Connection PointInsideConnection(Point pt)
@@ -84,9 +98,9 @@ namespace NodeThing
                 var c0 = parent.Node.ConnectionPos(Connection.Io.Input, i).Item2;
                 var c1 = child.Node.ConnectionPos(Connection.Io.Output, 0).Item2;
 
-                var lineLength = PointMath.len(PointMath.sub(c1, c0));
+                var lineLength = PointMath.Len(PointMath.Sub(c1, c0));
 
-                if (PointMath.len(PointMath.sub(ptf, c0)) <= lineLength && PointMath.len(PointMath.sub(ptf, c1)) <= lineLength) {
+                if (PointMath.Len(PointMath.Sub(ptf, c0)) <= lineLength && PointMath.Len(PointMath.Sub(ptf, c1)) <= lineLength) {
                     PointF p1 = new PointF(c0.X, c0.Y);
                     PointF p2 = new PointF(c1.X, c1.Y);
 
@@ -96,7 +110,7 @@ namespace NodeThing
                     PointF v = new PointF(p2.Y - p1.Y, -(p2.X - p1.X));
 
                     // distance from r to line = dot(norm(v), r)
-                    float d = Math.Abs(PointMath.dot(PointMath.normalize(v), r));
+                    float d = Math.Abs(PointMath.Dot(PointMath.Normalize(v), r));
 
                     if (d < 2)
                         return new Tuple<Connection, Connection>(parent.Node.Inputs[i], child.Node.Output);

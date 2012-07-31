@@ -62,7 +62,7 @@ namespace NodeThing
                 node.AddInput("A", Connection.Type.Texture);
                 node.AddInput("B", Connection.Type.Texture);
                 node.SetOutput("Output", Connection.Type.Texture);
-                node.AddProperty("Blend", new Tuple<float, float>(1, 1));
+                node.AddProperty("Blend", new Tuple<float, float>(1, 1), new Tuple<float, float>(-5, -5), new Tuple<float, float>(5, 5));
                 return node;
             }
 
