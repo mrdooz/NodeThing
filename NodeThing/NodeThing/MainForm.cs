@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.Serialization;
 using System.Windows.Forms;
@@ -244,38 +243,36 @@ namespace NodeThing
             foreach (var kv in node.Properties) {
                 var key = kv.Key;
                 var prop = kv.Value;
+                UserControl editor = null;
 
                 switch (prop.PropertyType) {
                     case PropertyType.Float:
                     case PropertyType.Int:
-                    case PropertyType.String: {
-                        var editor = new ValueEditor(key, prop, propertyChanged);
-                        flowLayoutPanel1.Controls.Add(editor);
+                    case PropertyType.String:
+                        editor = new ValueEditor(key, prop, propertyChanged);
                         break;
-                    }
 
                     case PropertyType.Float2:
                     case PropertyType.Int2:
-                    case PropertyType.Size: {
-                        var editor = new ValueEditor2d(key, prop, propertyChanged);
-                        flowLayoutPanel1.Controls.Add(editor);
+                    case PropertyType.Size:
+                        editor = new ValueEditor2d(key, prop, propertyChanged);
                         break;
-                    }
 
-
-                    case PropertyType.Color: {
-                        var editor = new ColorEditor(key, prop, propertyChanged);
-                        flowLayoutPanel1.Controls.Add(editor);
-
+                    case PropertyType.Color:
+                        editor = new ColorEditor(key, prop, propertyChanged);
                         break;
-                    }
                 }
 
+                if (editor != null)
+                    flowLayoutPanel1.Controls.Add(editor);
             }
 
-            var seq = Settings.Graph.GenerateCodeFromSelected(node, new Size(512, 512), "Preview");
-            if (seq.Sequence.Count > 0)
+            var seq = Settings.Graph.GenerateCodeFromSelected(node);
+            if (seq.Sequence.Count > 0) {
+                seq.Name = "Preview";
+                seq.Size = new Size(512, 512);
                 _factory.GenerateCode(seq, _displayForm.PreviewHandle());
+            }
         }
 
         private void generateToolStripMenuItem_Click(object sender, EventArgs e)
@@ -451,7 +448,6 @@ namespace NodeThing
             var ds = new DataContractSerializer(typeof(InstanceSettings), _knownTypes);
             using (var fileStream = new FileStream(_currentFilename, FileMode.Open, FileAccess.Read, FileShare.Read)) {
                 Settings = (InstanceSettings)ds.ReadObject(fileStream);
-                Settings.Graph.SetPropertyListener(PropertyChanged);
             }
 
             mainPanel.AutoScrollMinSize = Settings.Transform.CanvasSize;

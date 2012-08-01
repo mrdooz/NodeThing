@@ -123,7 +123,7 @@ namespace NodeThing
         private bool CodeGen(SequenceStep step, ref List<byte> opCodes)
         {
             var node = step.Node;
-            var dstTexture = step.TextureIdx;
+            var dstTexture = step.DstTextureIdx;
             var name = node.Name;
 
             if (name == "Sink") {
@@ -175,7 +175,7 @@ namespace NodeThing
             return true;
         }
 
-        public override void GenerateCode(GenerateSequence seq, IntPtr displayHandle)
+        public override void GenerateCode(GeneratorSequence seq, IntPtr displayHandle)
         {
             var opCodes = new List<byte>();
 
@@ -190,8 +190,8 @@ namespace NodeThing
 
             if (opCodes.Count > 0) {
                 var opCodeArray = opCodes.ToArray();
-                var finalTexture = seq.Sequence.LastOrDefault().TextureIdx;
-                renderTexture(displayHandle, seq.Size.Width, seq.Size.Height, seq.NumTexture, finalTexture, seq.Name, opCodeArray.Count(), opCodeArray);
+                var finalTexture = seq.Sequence.LastOrDefault().DstTextureIdx;
+                renderTexture(displayHandle, seq.Size.Width, seq.Size.Height, seq.NumTextures, finalTexture, seq.Name, opCodeArray.Count(), opCodeArray);
             }
 
         }

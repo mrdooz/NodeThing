@@ -219,13 +219,6 @@ namespace NodeThing
             g.ResetTransform();
         }
 
-        public void SetPropertyListener(EventHandler h)
-        {
-            //foreach (var kv in Properties) {
-                //kv.Value.Listener = h;
-            //}
-        }
-
         public T GetProperty<T>(string key)
         {
             var p = Properties[key];

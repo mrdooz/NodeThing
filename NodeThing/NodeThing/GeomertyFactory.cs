@@ -41,7 +41,7 @@ namespace NodeThing
             return null;
         }
 
-        public override void GenerateCode(GenerateSequence seq, IntPtr displayHandle)
+        public override void GenerateCode(GeneratorSequence seq, IntPtr displayHandle)
         {
             throw new NotImplementedException();
         }

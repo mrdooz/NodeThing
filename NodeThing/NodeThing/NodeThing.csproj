@@ -54,6 +54,7 @@
       <DependentUpon>ColorEditor.cs</DependentUpon>
     </Compile>
     <Compile Include="NodeProperty.cs" />
+    <Compile Include="TopologicalSorter.cs" />
     <Compile Include="ValueEditor2d.cs">
       <SubType>UserControl</SubType>
     </Compile>

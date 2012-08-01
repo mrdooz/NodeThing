@@ -16,24 +16,18 @@ namespace NodeThing
         [DataMember]
         List<Node> _nodes = new List<Node>();
 
-        public void SetPropertyListener(EventHandler h)
-        {
-            foreach (var n in _nodes) {
-                n.SetPropertyListener(h);
-            }
-        }
+        private Pen _connectionPen = new Pen(Color.Black, 2);
+        private Pen _selectedConnectionPen = new Pen(Color.CornflowerBlue, 2);
 
-        void RenderNode(GraphNode root, Graphics g, MainForm.ClientTransform transform)
+        private void RenderNode(GraphNode root, Graphics g, MainForm.ClientTransform transform)
         {
             root.Node.Render(g, transform);
+
             foreach (var child in root.Children) {
                 if (child != null) {
                     RenderNode(child, g, transform);
                 }
             }
-
-            var pen = new Pen(Color.Black, 2);
-            var selectedPen = new Pen(Color.CornflowerBlue, 2);
 
             // render connections from node's input to output
             for (var i = 0; i < root.Children.Count(); ++i) {
@@ -46,7 +40,7 @@ namespace NodeThing
                 if (cp0.Item1 && cp1.Item1) {
                     var scrolledCp0 = transform.PointToClient(cp0.Item2);
                     var scrolledCp1 = transform.PointToClient(cp1.Item2);
-                    g.DrawLine(root.Node.Inputs[i].Selected && child.Node.Output.Selected ? selectedPen : pen, scrolledCp0, scrolledCp1);
+                    g.DrawLine(root.Node.Inputs[i].Selected && child.Node.Output.Selected ? _selectedConnectionPen : _connectionPen, scrolledCp0, scrolledCp1);
                 }
             }
         }
@@ -83,21 +77,6 @@ namespace NodeThing
             return new Rectangle(tl.X, tl.Y, br.X - tl.X, br.Y - tl.Y);
         }
 
-        public Point LeftmostNode()
-        {
-            if (_nodes.Count == 0)
-                return new Point(0,0);
-
-            var res = _nodes[0].Pos;
-            for (var i = 1; i < _nodes.Count; ++i) {
-                if (_nodes[i].Pos.X < res.X) {
-                    res = _nodes[1].Pos;
-                }
-            }
-
-            return res;
-        }
-
         public List<Node> NodesInsideRect(Rectangle rect)
         {
             var res = new List<Node>();
@@ -128,7 +107,7 @@ namespace NodeThing
             }
         }
 
-        private Tuple<Connection, Connection> PointOnConnectionNode(Point pt, GraphNode parent)
+        private Tuple<Connection, Connection> PointOnConnectionInner(Point pt, GraphNode parent)
         {
             var ptf = new PointF(pt.X, pt.Y);
 
@@ -144,22 +123,22 @@ namespace NodeThing
                 var lineLength = PointMath.Len(PointMath.Sub(c1, c0));
 
                 if (PointMath.Len(PointMath.Sub(ptf, c0)) <= lineLength && PointMath.Len(PointMath.Sub(ptf, c1)) <= lineLength) {
-                    PointF p1 = new PointF(c0.X, c0.Y);
-                    PointF p2 = new PointF(c1.X, c1.Y);
+                    var p1 = new PointF(c0.X, c0.Y);
+                    var p2 = new PointF(c1.X, c1.Y);
 
-                    PointF r = new PointF(pt.X - p1.X, pt.Y - p1.Y);
+                    var r = new PointF(pt.X - p1.X, pt.Y - p1.Y);
 
                     // normal to the line
-                    PointF v = new PointF(p2.Y - p1.Y, -(p2.X - p1.X));
+                    var v = new PointF(p2.Y - p1.Y, -(p2.X - p1.X));
 
                     // distance from r to line = dot(norm(v), r)
-                    float d = Math.Abs(PointMath.Dot(PointMath.Normalize(v), r));
+                    var d = Math.Abs(PointMath.Dot(PointMath.Normalize(v), r));
 
                     if (d < 2)
                         return new Tuple<Connection, Connection>(parent.Node.Inputs[i], child.Node.Output);
                 }
 
-                var childResult = PointOnConnectionNode(pt, parent.Children[i]);
+                var childResult = PointOnConnectionInner(pt, parent.Children[i]);
                 if (childResult.Item1 != null && childResult.Item2 != null)
                     return childResult;
             }
@@ -169,14 +148,14 @@ namespace NodeThing
         public Tuple<Connection, Connection> PointOnConnection(Point pt)
         {
             foreach (var r in _roots) {
-                var res = PointOnConnectionNode(pt, r);
+                var res = PointOnConnectionInner(pt, r);
                 if (res.Item1 != null && res.Item2 != null)
                     return res;
             }
             return new Tuple<Connection, Connection>(null, null);
         }
 
-        private bool DeleteConnectionNode(GraphNode parent, Connection cParent, Connection cChild)
+        private bool DeleteConnectionInner(GraphNode parent, Connection cParent, Connection cChild)
         {
             for (var i = 0; i < parent.Children.Count(); ++i) {
                 var child = parent.Children[i];
@@ -200,7 +179,7 @@ namespace NodeThing
                     return true;
                 }
 
-                if (DeleteConnectionNode(child, cParent, cChild))
+                if (DeleteConnectionInner(child, cParent, cChild))
                     return true;
             }
             return false;
@@ -209,7 +188,7 @@ namespace NodeThing
         public void DeleteConnection(Connection parent, Connection child)
         {
             foreach (var r in _roots) {
-                if (DeleteConnectionNode(r, parent, child))
+                if (DeleteConnectionInner(r, parent, child))
                     return;
             }
         }
@@ -286,151 +265,6 @@ namespace NodeThing
             _roots.RemoveAll(a => a == c);
         }
 
-        private CompNode CreateGraph(GraphNode root, CompNode parent, Dictionary<GraphNode, CompNode> nodes, ref List<CompNode> leaf)
-        {
-            CompNode node;
-            bool newNode = false;
-
-            // Check if the node has already been added
-            if (!nodes.TryGetValue(root, out node)) {
-                node = new CompNode { Depth = 0, Node = root };
-                nodes.Add(root, node);
-                newNode = true;
-            } 
-            
-            if (parent != null)
-                node.Parents.Add(parent);
-
-            if (newNode) {
-                foreach (var c in root.Children) {
-                    if (c != null) {
-                        node.Children.Add(CreateGraph(c, node, nodes, ref leaf));
-                    }
-                }
-            }
-
-            if (node.Children.Count == 0)
-                leaf.Add(node);
-
-            return node;
-        }
-
-        private int SetDepth(CompNode root, CompNode parent)
-        {
-            // To get the topological sorting I want, we set the depth of each node to the max of its children
-            if (root.Children.Count == 0) {
-                root.Depth = parent == null ? 0 : parent.Depth + 1;
-            } else {
-                int d = 0;
-                foreach (var c in root.Children) {
-                    d = Math.Max(d, SetDepth(c, root));
-                }
-                root.Depth = d;
-            }
-            return root.Depth;
-        }
-
-        public List<CompNode> TopologicalSort(CompNode g, List<CompNode> leaf)
-        {
-            var res = new List<CompNode>();
-            var processed = new HashSet<CompNode>();
-            while (leaf.Count > 0) {
-
-                // pick the leaf with the greatest depth
-                leaf.Sort((a, b) => a.Depth > b.Depth ? -1 : 1);
-                var head = leaf[0];
-                res.Add(head);
-                leaf.RemoveAt(0);
-
-                processed.Add(head);
-                // Check if any of the head's parents are leaf now
-                foreach (var p in head.Parents) {
-                    bool isLeaf = p.Children.All(processed.Contains);
-                    if (isLeaf)
-                        leaf.Add(p);
-                }
-
-            }
-            return res;
-        }
-
-
-        public GenerateSequence GenerateCodeFromSelected(Node selected, Size size, string name)
-        {
-            // If selecting a sink, use its child instead as sinks are really just sentinels..
-            GraphNode root;
-            if (selected.IsSink()) {
-                if (selected.Inputs.Count != 1)
-                    return new GenerateSequence();
-                size = selected.GetProperty<Size>("Size");
-                name = selected.GetProperty<string>("Name");
-                root = FindNode(selected).Children[0];
-            } else {
-                root = FindNode(selected);
-            }
-            if (root == null)
-                return new GenerateSequence();
-            return GenerateCodeInner(root, size, name);
-        }
-
-        private GenerateSequence GenerateCodeInner(GraphNode root, Size size, string name)
-        {
-            var nodes = new Dictionary<GraphNode, CompNode>();
-            var leaf = new List<CompNode>();
-            var g = CreateGraph(root, null, nodes, ref leaf);
-            SetDepth(g, null);
-            var sorted = TopologicalSort(g, leaf);
-
-            // Output the actual processing and texture allocation
-            var completedNodes = new HashSet<CompNode>();
-            var textureCache = new List<int>();
-            var nextTextureIdx = 0;
-
-            var candidates = new List<Tuple<int, CompNode>>();
-
-            var sequence = new List<SequenceStep>();
-            var usedTextures = new Dictionary<CompNode, int>();
-
-            foreach (var s in sorted) {
-                // Allocate a texture for s
-                int textureIdx;
-                if (textureCache.Count > 0) {
-                    textureIdx = textureCache[0];
-                    textureCache.RemoveAt(0);
-                } else {
-                    textureIdx = nextTextureIdx++;
-                }
-
-                var cur = new Tuple<int, CompNode>(textureIdx, s);
-                var inputTextures = new List<int>();
-                foreach (var c in s.Children) {
-                    int texture;
-                    if (usedTextures.TryGetValue(c, out texture)) {
-                        inputTextures.Add(texture);
-                    }
-                }
-
-                sequence.Add(new SequenceStep { TextureIdx = textureIdx, Node = s.Node.Node, InputTextures = inputTextures });
-                completedNodes.Add(s);
-                usedTextures.Add(s, textureIdx);
-
-                // Check if any of the candidates have all their parents done, in which case they
-                // can recycle their texture
-                for (var i = 0; i < candidates.Count; ++i) {
-                    var cand = candidates[i];
-                    bool safeToRemove = cand.Item2.Parents.All(completedNodes.Contains);
-                    if (safeToRemove) {
-                        textureCache.Add(cand.Item1);
-                        candidates.RemoveAt(i);
-                    }
-
-                }
-
-                candidates.Add(cur);
-            }
-            return new GenerateSequence() { Name = name, NumTexture = nextTextureIdx, Sequence = sequence, Size = size };
-        }
-
         private GraphNode FindSelectedChild(GraphNode node)
         {
             if (node.Node.Selected)
@@ -446,11 +280,28 @@ namespace NodeThing
             return null;
         }
 
-        public List<GenerateSequence> GenerateCode()
+        public GeneratorSequence GenerateCodeFromSelected(Node selected)
         {
-            var res = new List<GenerateSequence>();
+            // If selecting a sink, use its child instead as sinks are really just sentinels..
+            GraphNode root;
+            if (selected.IsSink()) {
+                if (selected.Inputs.Count != 1)
+                    return new GeneratorSequence();
+                root = FindNode(selected).Children[0];
+            } else {
+                root = FindNode(selected);
+            }
+            if (root == null)
+                return new GeneratorSequence();
+            return TopologicalSorter.SequenceFromNode(root);
+        }
 
-            // Create a graph from each node in the root-list that is a sink (actually from the sink's child)
+
+        public List<GeneratorSequence> GenerateCode()
+        {
+            // Generates sequences for all the roots in the current graph
+            var res = new List<GeneratorSequence>();
+
             foreach (var r in _roots) {
 
                 if (r.Node.IsSink()) {
@@ -460,62 +311,24 @@ namespace NodeThing
                         var name = r.Node.GetProperty<string>("Name");
                         var selectedChild = FindSelectedChild(root);
 
-                        var seq = GenerateCodeInner(root, size, name);
+                        var seq = TopologicalSorter.SequenceFromNode(root);
                         seq.IsPreview = false;
                         res.Add(seq);
                         if (selectedChild != null) {
-                            var previewSeq = GenerateCodeInner(selectedChild, size, name);
+                            var previewSeq = TopologicalSorter.SequenceFromNode(selectedChild);
                             previewSeq.IsPreview = true;
                             res.Add(previewSeq);
                         }
                     }
                 } else {
                     // Node isn't a proper sink, so we generate a preview
-                    var size = new Size(512, 512);
-                    var name = "Preview";
-                    var seq = GenerateCodeInner(r, size, name);
+                    var seq = TopologicalSorter.SequenceFromNode(r);
                     res.Add(seq);
                 }
 
             }
             return res;
         }
-    }
-
-    public class SequenceStep
-    {
-        public int TextureIdx { get; set; }
-        public Node Node { get; set; }
-        public List<int> InputTextures { get; set; }
-    }
-
-    public class GenerateSequence
-    {
-        public GenerateSequence()
-        {
-            Sequence = new List<SequenceStep>();
-        }
-
-        public bool IsPreview { get; set; }
-
-        public Size Size { get; set; }
-        public string Name { get; set; }
-        public List<SequenceStep> Sequence { get; set; }
-        public int NumTexture { get; set; }
-    }
-
-    public class CompNode
-    {
-        public CompNode()
-        {
-            Children = new List<CompNode>();
-            Parents = new List<CompNode>();
-        }
-
-        public GraphNode Node { get; set; }
-        public int Depth { get; set; }
-        public List<CompNode> Parents { get; set; }
-        public List<CompNode> Children { get; set; }
     }
 
     [DataContract(IsReference = true)]
