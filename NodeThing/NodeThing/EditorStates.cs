@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -128,7 +129,7 @@ namespace NodeThing
 
                 // Check for entering canvas resize mode
                 if (ModifierKeys == Keys.Shift) {
-                    return new ResizingState(_form, pt);
+                    return new PanningState(_form, pt);
                 }
 
                 return this;
@@ -244,14 +245,14 @@ namespace NodeThing
             private List<Tuple<Node, Point>> _startingNodePositions = new List<Tuple<Node, Point>>();
         }
 
-        private class ResizingState : StateBase
+        private class PanningState : StateBase
         {
-            private Point _startPos;
+            private Point _prevPos;
             private Size _orgSize;
 
-            public ResizingState(MainForm form, Point startPos) : base(form)
+            public PanningState(MainForm form, Point startPos) : base(form)
             {
-                _startPos = startPos;
+                _prevPos = startPos;
                 _orgSize = _form.mainPanel.AutoScrollMinSize;
             }
 
@@ -262,10 +263,14 @@ namespace NodeThing
 
             public override StateBase MouseMove(object sender, MouseEventArgs e)
             {
-                int dx = Math.Abs(e.X - _startPos.X);
-                int dy = Math.Abs(e.Y - _startPos.Y);
+                int dx = e.X - _prevPos.X;
+                int dy = e.Y - _prevPos.Y;
 
-                _form.UpdateCanvasSize(_orgSize.Width + dx, _orgSize.Height + dy, e.X - _startPos.X, e.Y - _startPos.Y);
+                // Only update the previous position if we actually move. I'm relying on
+                // Windows having internal subpixel precision
+                _prevPos = new Point(dx != 0 ? e.X : _prevPos.X, dy != 0 ? e.Y : _prevPos.Y);
+
+                _form.OnPan(dx, dy);
 
                 return this;
             }

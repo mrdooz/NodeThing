@@ -62,6 +62,42 @@ namespace NodeThing
             return _nodes.FirstOrDefault(node => node.PointInsideBody(pt));
         }
 
+        public Rectangle GetBoundingRectangle()
+        {
+            if (_nodes.Count == 0)
+                return new Rectangle(0, 0, 0, 0);
+
+            var first = _nodes[0];
+            var rect = first.BoundingRect();
+            // Kinda silly, but the Pos doesn't take the connection blobs into account (but the BoundingRect does)
+            var pos = new Point(rect.Left, rect.Top);
+            var tl = pos;
+            var br = new Point(rect.Right, rect.Bottom);
+            for (var i = 1; i < _nodes.Count; ++i) {
+                rect = _nodes[i].BoundingRect();
+                pos = new Point(rect.Left, rect.Top);
+                tl = PointMath.Min(tl, pos);
+                br = PointMath.Max(br, new Point(rect.Right, rect.Bottom));
+            }
+
+            return new Rectangle(tl.X, tl.Y, br.X - tl.X, br.Y - tl.Y);
+        }
+
+        public Point LeftmostNode()
+        {
+            if (_nodes.Count == 0)
+                return new Point(0,0);
+
+            var res = _nodes[0].Pos;
+            for (var i = 1; i < _nodes.Count; ++i) {
+                if (_nodes[i].Pos.X < res.X) {
+                    res = _nodes[1].Pos;
+                }
+            }
+
+            return res;
+        }
+
         public List<Node> NodesInsideRect(Rectangle rect)
         {
             var res = new List<Node>();
@@ -84,6 +120,13 @@ namespace NodeThing
             return null;
         }
 
+        public void MoveNodes(int dx, int dy)
+        {
+            foreach (var n in _nodes) {
+                var pt = n.Pos;
+                n.Pos = new Point(pt.X + dx, pt.Y + dy);
+            }
+        }
 
         private Tuple<Connection, Connection> PointOnConnectionNode(Point pt, GraphNode parent)
         {

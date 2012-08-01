@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.Serialization;
 using System.Windows.Forms;
@@ -45,6 +46,7 @@ namespace NodeThing
 
             [DataMember]
             public Point ScrollOffset { get; set; }
+
         }
 
         public InstanceSettings Settings { get; private set; }
@@ -103,10 +105,10 @@ namespace NodeThing
         private void saveToolStripMenuItem_Click(object sender, EventArgs e)
         {
             try {
-                var ds = new DataContractSerializer(typeof (Graph), _knownTypes);
+                var ds = new DataContractSerializer(typeof (InstanceSettings), _knownTypes);
                 var settings = new XmlWriterSettings() { Indent = true };
                 using (var x = XmlWriter.Create(@"c:\temp\tjong.xml", settings)) {
-                    ds.WriteObject(x, Settings.Graph);
+                    ds.WriteObject(x, Settings);
                 }
             } catch (IOException) {
 
@@ -115,13 +117,15 @@ namespace NodeThing
 
         private void loadToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var ds = new DataContractSerializer(typeof(Graph), _knownTypes);
+            var ds = new DataContractSerializer(typeof(InstanceSettings), _knownTypes);
             using (var fileStream = new FileStream(@"c:\temp\tjong.xml", FileMode.Open, FileAccess.Read, FileShare.Read)) {
-                Settings.Graph = (Graph)ds.ReadObject(fileStream);
+                Settings = (InstanceSettings)ds.ReadObject(fileStream);
                 Settings.Graph.SetPropertyListener(PropertyChanged);
             }
+
             mainPanel.AutoScrollMinSize = Settings.CanvasSize;
-            mainPanel.Invalidate();
+            mainPanel_Scroll(this, new ScrollEventArgs(ScrollEventType.LargeIncrement, Settings.ScrollOffset.X, ScrollOrientation.HorizontalScroll));
+            mainPanel_Scroll(this, new ScrollEventArgs(ScrollEventType.LargeIncrement, Settings.ScrollOffset.Y, ScrollOrientation.VerticalScroll));
         }
 
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
@@ -268,6 +272,7 @@ namespace NodeThing
         {
             Settings.ScrollOffset = e.ScrollOrientation == ScrollOrientation.HorizontalScroll
                 ? new Point(e.NewValue, Settings.ScrollOffset.Y) : new Point(Settings.ScrollOffset.X, e.NewValue);
+            mainPanel.AutoScrollPosition = new Point(Settings.ScrollOffset.X, Settings.ScrollOffset.Y);
             mainPanel.Invalidate();
         }
 
@@ -288,11 +293,68 @@ namespace NodeThing
             }
         }
 
-        public void UpdateCanvasSize(int width, int height, int dx, int dy)
+        public void OnPan(int dx, int dy)
         {
-            Settings.CanvasSize = new Size(width, height);
-            mainPanel.AutoScrollMinSize = Settings.CanvasSize;
-            mainPanel.HorizontalScroll.Value = dx;
+            var canvasSize = mainPanel.AutoScrollMinSize;
+            var scrollX = Settings.ScrollOffset.X + dx;
+            var scrollY = Settings.ScrollOffset.Y + dy;
+
+            if (dx < 0) {
+
+                if (scrollX < 0) {
+                    // Resize the canvas, and nudge all the components inwards
+                    var ofs = Math.Abs(scrollX);
+                    Settings.Graph.MoveNodes(ofs, 0);
+
+                    mainPanel.AutoScrollMinSize = new Size(canvasSize.Width + ofs, canvasSize.Height);
+                }
+                mainPanel_Scroll(this, new ScrollEventArgs(ScrollEventType.LargeDecrement, Math.Max(0, scrollX), ScrollOrientation.HorizontalScroll));
+
+            } else if (dx > 0) {
+                // Check if we need to expand the canvas to the right
+                // Settings.ScrollOffset.X + dx + mainPanel.Size.Width > canvasSize.Width
+                if (scrollX + mainPanel.Size.Width > canvasSize.Width) {
+                    mainPanel.AutoScrollMinSize = new Size(scrollX + mainPanel.Size.Width, canvasSize.Height);
+                }
+                mainPanel_Scroll(this, new ScrollEventArgs(ScrollEventType.LargeIncrement, scrollX, ScrollOrientation.HorizontalScroll));
+            }
+
+            if (dy < 0) {
+
+                if (scrollY < 0) {
+                    // Resize the canvas, and nudge all the components downwards
+                    var ofs = Math.Abs(scrollY);
+                    Settings.Graph.MoveNodes(0, ofs);
+
+                    mainPanel.AutoScrollMinSize = new Size(canvasSize.Width, canvasSize.Height+ofs);
+                }
+                mainPanel_Scroll(this, new ScrollEventArgs(ScrollEventType.LargeDecrement, Math.Max(0, scrollY), ScrollOrientation.VerticalScroll));
+
+            } else if (dy > 0) {
+                // Check if we need to expand the canvas to the right
+                if (scrollY + mainPanel.Size.Height > canvasSize.Height) {
+                    mainPanel.AutoScrollMinSize = new Size(canvasSize.Width, scrollY + mainPanel.Size.Height);
+                }
+                mainPanel_Scroll(this, new ScrollEventArgs(ScrollEventType.LargeIncrement, scrollY, ScrollOrientation.VerticalScroll));
+            }
+
+            Settings.CanvasSize = mainPanel.AutoScrollMinSize;
+        }
+
+        private void cropToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var rect = Settings.Graph.GetBoundingRectangle();
+            if (rect.Width == 0)
+                return;
+
+            Settings.Graph.MoveNodes(-rect.Left, -rect.Top);
+            var size = new Size(rect.Width, rect.Height);
+            mainPanel.AutoScrollMinSize = size;
+            Settings.CanvasSize = size;
+
+            mainPanel_Scroll(this, new ScrollEventArgs(ScrollEventType.LargeDecrement, 0, ScrollOrientation.HorizontalScroll));
+            mainPanel_Scroll(this, new ScrollEventArgs(ScrollEventType.LargeDecrement, 0, ScrollOrientation.VerticalScroll));
+
         }
 
     }

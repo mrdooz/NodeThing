@@ -145,7 +145,7 @@ namespace NodeThing
 
         public Rectangle BoundingRect()
         {
-            return new Rectangle(Pos, new Size(_width, _height + _headerHeight));
+            return new Rectangle(new Point(Pos.X - _connectionRadius, Pos.Y), new Size(_width + _connectionDiameter, _height + _headerHeight));
         }
 
         public void Render(Graphics g, Point scrollOffset)
