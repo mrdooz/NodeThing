@@ -14,9 +14,10 @@ namespace NodeThing
             protected StateBase(MainForm form)
             {
                 _form = form;
+                _transform = _form.Settings.Transform;
             }
 
-            public virtual void Render(Graphics g, Point scrollOffset)
+            public virtual void Render(Graphics g, Point scrollOffset, int zoomFactor)
             {
             }
 
@@ -36,6 +37,7 @@ namespace NodeThing
             }
 
             protected MainForm _form;
+            protected ClientTransform _transform;
         }
 
         private class DefaultState : StateBase
@@ -49,7 +51,7 @@ namespace NodeThing
             public override StateBase MouseMove(object sender, MouseEventArgs e)
             {
                 var pt = new Point(e.X, e.Y);
-                var scrolledPt = _form.PointToScrolled(pt);
+                var scrolledPt = _transform.PointToScrolled(pt);
 
                 if (_form._selectedNodes.Count > 0) {
                     // Start moving if the node we're clicking inside is in the selected list
@@ -70,7 +72,7 @@ namespace NodeThing
             public override StateBase MouseUp(object sender, MouseEventArgs e)
             {
                 var pt = new Point(e.X, e.Y);
-                var scrolledPt = _form.PointToScrolled(pt);
+                var scrolledPt = _transform.PointToScrolled(pt);
 
                 if (_form.Settings.Graph.PointInsideNode(scrolledPt) == null) {
                     // Create a new node
@@ -87,7 +89,7 @@ namespace NodeThing
             public override StateBase MouseDown(object sender, MouseEventArgs e)
             {
                 var pt = new Point(e.X, e.Y);
-                var scrolledPt = _form.PointToScrolled(pt);
+                var scrolledPt = _transform.PointToScrolled(pt);
 
                 _form.ClearSelectedConnections();
 
@@ -95,23 +97,23 @@ namespace NodeThing
                 var hitConnection = _form.Settings.Graph.PointInsideConnection(scrolledPt);
                 if (hitConnection != null && (hitConnection.Direction == Connection.Io.Output || !hitConnection.Used)) {
                     _form.mainPanel.Invalidate();
-                    return new ClickedConnectionState(_form, 
-                        PointMath.Sub(hitConnection.Node.ConnectionPos(hitConnection.Direction, hitConnection.Slot).Item2, _form.Settings.ScrollOffset),
-                        hitConnection);
+                    var startPos = _transform.PointToClient(hitConnection.Node.ConnectionPos(hitConnection.Direction, hitConnection.Slot).Item2);
+                    return new ClickedConnectionState(_form, startPos, hitConnection);
                 }
 
                 // Check for selecting a node
                 var hitNode = _form.Settings.Graph.PointInsideNode(scrolledPt);
                 if (hitNode != null) {
-                    // ctrl-click for multiple select
-                    if (ModifierKeys != Keys.Control && !hitNode.Selected) {
-                        _form.ClearSelectedNodes();
-                    }
+                    if (!hitNode.Selected) {
+                        // ctrl-click for multiple select
+                        if (ModifierKeys != Keys.Control)
+                            _form.ClearSelectedNodes();
 
-                    _form._selectedNodes.Add(hitNode);
-                    hitNode.Selected = true;
-                    _form.mainPanel.Invalidate();
-                    _form.NodeSelected(hitNode);
+                        hitNode.Selected = true;
+                        _form._selectedNodes.Add(hitNode);
+                        _form.NodeSelected(hitNode);
+                        _form.mainPanel.Invalidate();
+                    }
                     return this;
                 }
 
@@ -146,7 +148,7 @@ namespace NodeThing
                 _curPos = pt;
             }
 
-            public override void Render(Graphics g, Point scrollOffset)
+            public override void Render(Graphics g, Point scrollOffset, int zoomFactor)
             {
                 var pen = new Pen(Color.Black, 2);
                 g.DrawLine(pen, StartPos, _curPos);
@@ -160,7 +162,7 @@ namespace NodeThing
                 }
 
                 _curPos = new Point(e.X, e.Y);
-                var scrolledPt = _form.PointToScrolled(_curPos);
+                var scrolledPt = _transform.PointToScrolled(_curPos);
 
                 var conn = _form.Settings.Graph.PointInsideConnection(scrolledPt);
                 if (conn != null && conn != Start) {
@@ -183,7 +185,7 @@ namespace NodeThing
                 }
 
                 var pt = new Point(e.X, e.Y);
-                var scrolledPt = _form.PointToScrolled(pt);
+                var scrolledPt = _transform.PointToScrolled(pt);
 
                 var end = _form.Settings.Graph.PointInsideConnection(scrolledPt);
                 if (end == null) {
@@ -213,26 +215,25 @@ namespace NodeThing
 
         private class MovingState : StateBase
         {
+            private Point _prevPos;
+
             public MovingState(MainForm form, Point pos)
                 : base(form)
             {
-                foreach (var node in form._selectedNodes) {
-                    _startingNodePositions.Add(new Tuple<Node, Point>(node, node.Pos));
-                }
-
-                _startPos = pos;
+                _prevPos = pos;
             }
 
             public override StateBase MouseMove(object sender, MouseEventArgs e)
             {
-                var dx = e.X - _startPos.X;
-                var dy = e.Y - _startPos.Y;
+                int dx = e.X - _prevPos.X;
+                int dy = e.Y - _prevPos.Y;
 
-                foreach (var n in _startingNodePositions) {
-                    var node = n.Item1;
-                    node.Pos = new Point(n.Item2.X + dx, n.Item2.Y + dy);
+                var newPos = new Point(e.X, e.Y);
+                if (newPos != _prevPos) {
+                    _prevPos = newPos;
+                    _form.OnMoveSelected(dx, dy);
                 }
-                _form.mainPanel.Invalidate();
+
                 return this;
             }
 
@@ -240,20 +241,15 @@ namespace NodeThing
             {
                 return new DefaultState(_form);
             }
-
-            private Point _startPos;
-            private List<Tuple<Node, Point>> _startingNodePositions = new List<Tuple<Node, Point>>();
         }
 
         private class PanningState : StateBase
         {
             private Point _prevPos;
-            private Size _orgSize;
 
             public PanningState(MainForm form, Point startPos) : base(form)
             {
                 _prevPos = startPos;
-                _orgSize = _form.mainPanel.AutoScrollMinSize;
             }
 
             public override StateBase MouseUp(object sender, MouseEventArgs e)
@@ -266,12 +262,11 @@ namespace NodeThing
                 int dx = e.X - _prevPos.X;
                 int dy = e.Y - _prevPos.Y;
 
-                // Only update the previous position if we actually move. I'm relying on
-                // Windows having internal subpixel precision
-                _prevPos = new Point(dx != 0 ? e.X : _prevPos.X, dy != 0 ? e.Y : _prevPos.Y);
-
-                _form.OnPan(dx, dy);
-
+                var newPos = new Point(e.X, e.Y);
+                if (newPos != _prevPos) {
+                    _prevPos = newPos;
+                    _form.OnPan(dx, dy);
+                }
                 return this;
             }
         }
@@ -300,13 +295,13 @@ namespace NodeThing
                 return this;
             }
 
-            public override void Render(Graphics g, Point scrollOffset)
+            public override void Render(Graphics g, Point scrollOffset, int zoomFactor)
             {
                 var pen = new Pen(Color.Black, 2);
                 var pt = _form.mainPanel.PointToClient(MousePosition);
                 var tl = PointMath.Min(pt, _startPos);
                 var br = PointMath.Max(pt, _startPos);
-                g.DrawRectangle(pen, tl.X, tl.Y, br.X - tl.X, br.Y - tl.Y);
+                g.DrawRectangle(pen, new Rectangle(tl, PointMath.Diff(br, tl)));
             }
         }
     }

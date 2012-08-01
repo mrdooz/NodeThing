@@ -22,8 +22,13 @@ namespace NodeThing
             groupBox1.Text = name;
             ValueChanged += handler;
 
-            if (!_property.IsBounded || _property.PropertyType != PropertyType.String)
+            if (_property.PropertyType == PropertyType.String)
+                textBox.Size = new Size(drawPanel.Bounds.Right - textBox.Bounds.Left, textBox.Size.Height);
+
+            if (!_property.IsBounded || _property.PropertyType != PropertyType.Float) {
                 drawPanel.Hide();
+                useBounds.Hide();
+            }
         }
 
         private void drawPanel_Paint(object sender, PaintEventArgs e)
@@ -37,7 +42,7 @@ namespace NodeThing
             var p = (NodeProperty<T>)prop;
             var orgValue = value;
 
-            if (p.IsBounded) {
+            if (p.IsBounded && useBounds.Checked) {
                 if (value.CompareTo(p.Max) > 0)
                     value = p.Max;
                 if (value.CompareTo(p.Min) < 0)

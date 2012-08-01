@@ -20,8 +20,10 @@ namespace NodeThing
             UpdateTextBox();
 
             // Hide the 2d panel if the property isn't a float pair
-            if (!_property.IsBounded || _property.PropertyType != PropertyType.Float2)
+            if (!_property.IsBounded || _property.PropertyType != PropertyType.Float2) {
                 drawPanel.Hide();
+                useBounds.Hide();
+            }
         }
 
         private void drawPanel_Paint(object sender, PaintEventArgs e)
@@ -94,7 +96,7 @@ namespace NodeThing
             var p = (NodeProperty<Tuple<T, T>>)_property;
             var orgValue = value;
 
-            if (p.IsBounded) {
+            if (p.IsBounded && useBounds.Checked) {
                 var maxValue = item == 0 ? p.Max.Item1 : p.Max.Item2;
                 var minValue = item == 0 ? p.Min.Item1 : p.Min.Item2;
                 if (value.CompareTo(maxValue) > 0)

@@ -30,6 +30,7 @@
             this.drawPanel = new System.Windows.Forms.Panel();
             this.textBox = new System.Windows.Forms.TextBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.useBounds = new System.Windows.Forms.CheckBox();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -53,15 +54,30 @@
             // 
             // groupBox1
             // 
+            this.groupBox1.AutoSize = true;
+            this.groupBox1.Controls.Add(this.useBounds);
             this.groupBox1.Controls.Add(this.drawPanel);
             this.groupBox1.Controls.Add(this.textBox);
             this.groupBox1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.groupBox1.Location = new System.Drawing.Point(0, 0);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(170, 50);
+            this.groupBox1.Size = new System.Drawing.Size(170, 81);
             this.groupBox1.TabIndex = 2;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "groupBox1";
+            // 
+            // useBounds
+            // 
+            this.useBounds.AutoSize = true;
+            this.useBounds.Checked = true;
+            this.useBounds.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.useBounds.Location = new System.Drawing.Point(81, 45);
+            this.useBounds.Name = "useBounds";
+            this.useBounds.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
+            this.useBounds.Size = new System.Drawing.Size(83, 17);
+            this.useBounds.TabIndex = 2;
+            this.useBounds.Text = "Use bounds";
+            this.useBounds.UseVisualStyleBackColor = true;
             // 
             // ValueEditor
             // 
@@ -70,10 +86,11 @@
             this.AutoSize = true;
             this.Controls.Add(this.groupBox1);
             this.Name = "ValueEditor";
-            this.Size = new System.Drawing.Size(170, 50);
+            this.Size = new System.Drawing.Size(170, 81);
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
@@ -82,5 +99,6 @@
         private System.Windows.Forms.Panel drawPanel;
         private System.Windows.Forms.TextBox textBox;
         private System.Windows.Forms.GroupBox groupBox1;
+        private System.Windows.Forms.CheckBox useBounds;
     }
 }

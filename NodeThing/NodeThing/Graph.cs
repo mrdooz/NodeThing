@@ -23,12 +23,12 @@ namespace NodeThing
             }
         }
 
-        void RenderNode(GraphNode root, Graphics g, Point scrollOffset)
+        void RenderNode(GraphNode root, Graphics g, MainForm.ClientTransform transform)
         {
-            root.Node.Render(g, scrollOffset);
+            root.Node.Render(g, transform);
             foreach (var child in root.Children) {
                 if (child != null) {
-                    RenderNode(child, g, scrollOffset);
+                    RenderNode(child, g, transform);
                 }
             }
 
@@ -44,17 +44,17 @@ namespace NodeThing
                 var cp0 = root.Node.ConnectionPos(Connection.Io.Input, i);
                 var cp1 = child.Node.ConnectionPos(Connection.Io.Output, 0);
                 if (cp0.Item1 && cp1.Item1) {
-                    var scrolledCp0 = new Point(cp0.Item2.X - scrollOffset.X, cp0.Item2.Y - scrollOffset.Y);
-                    var scrolledCp1 = new Point(cp1.Item2.X - scrollOffset.X, cp1.Item2.Y - scrollOffset.Y);
+                    var scrolledCp0 = transform.PointToClient(cp0.Item2);
+                    var scrolledCp1 = transform.PointToClient(cp1.Item2);
                     g.DrawLine(root.Node.Inputs[i].Selected && child.Node.Output.Selected ? selectedPen : pen, scrolledCp0, scrolledCp1);
                 }
             }
         }
 
-        public void Render(Graphics g, Point scrollOffset)
+        public void Render(Graphics g, MainForm.ClientTransform transform)
         {
             foreach (var r in _roots)
-                RenderNode(r, g, scrollOffset);
+                RenderNode(r, g, transform);
         }
 
         public Node PointInsideNode(Point pt)

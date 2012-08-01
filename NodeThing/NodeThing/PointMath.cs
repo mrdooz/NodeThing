@@ -49,5 +49,10 @@ namespace NodeThing
             return new Point(Math.Max(a.X, b.X), Math.Max(a.Y, b.Y));
         }
 
+        static public Size Diff(Point a, Point b)
+        {
+            return new Size(a.X - b.X, a.Y - b.Y);
+        }
+
     }
 }

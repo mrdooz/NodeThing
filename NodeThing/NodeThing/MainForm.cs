@@ -6,7 +6,6 @@ using System.Runtime.Serialization;
 using System.Windows.Forms;
 using System.Xml;
 using System.IO;
-using ColorWheel;
 
 namespace NodeThing
 {
@@ -30,16 +29,14 @@ namespace NodeThing
         private DisplayForm _displayForm;
         private Timer _redrawTimer = new Timer();
 
-        [DataContract]
-        public class InstanceSettings
-        {
-            public InstanceSettings()
-            {
-                Graph = new Graph();
-            }
+        private string _currentFilename;
 
-            [DataMember]
-            public Graph Graph { get; set; }
+        public class ClientTransform
+        {
+            public ClientTransform()
+            {
+                ZoomFactor = 1;
+            }
 
             [DataMember]
             public Size CanvasSize { get; set; }
@@ -47,6 +44,57 @@ namespace NodeThing
             [DataMember]
             public Point ScrollOffset { get; set; }
 
+            public int ZoomFactor
+            {
+                get { return _zoomFactor; }
+                set
+                {
+                    float[] zoomScales = {1, 1.25f, 1.5f, 2, 5};
+
+                    _zoomFactor = Math.Max(1, Math.Min(5, value));
+                    _zoomValue = zoomScales[_zoomFactor];
+                }
+            }
+
+            [DataMember] 
+            private float _zoomValue;
+
+            [DataMember] 
+            private int _zoomFactor;
+
+
+            public Point PointToScrolled(Point pt)
+            {
+                // convert a point in client space to a point in virtual mainPanel space
+                return new Point(
+                    ZoomFactor * (pt.X + ScrollOffset.X),
+                    ZoomFactor * (pt.Y + ScrollOffset.Y));
+            }
+
+            public Point PointToClient(Point pt)
+            {
+                // convert from logical space to client space
+                return new Point(
+                    (pt.X - ScrollOffset.X) / ZoomFactor,
+                    (pt.Y - ScrollOffset.Y) / ZoomFactor);
+            }
+
+        }
+
+        [DataContract]
+        public class InstanceSettings
+        {
+            public InstanceSettings()
+            {
+                Graph = new Graph();
+                Transform = new ClientTransform();
+            }
+
+            [DataMember]
+            public Graph Graph { get; set; }
+
+            [DataMember]
+            public ClientTransform Transform { get; set; }
         }
 
         public InstanceSettings Settings { get; private set; }
@@ -61,11 +109,26 @@ namespace NodeThing
             foreach (var item in _factory.NodeNames())
                 nodeList.Items.Add(item);
 
+            Settings = new InstanceSettings();
             _currentState = new DefaultState(this);
 
-            mainPanel.AutoScrollMinSize = mainPanel.Size;
+            mainPanel.MouseWheel += OnMouseWheel;
+        }
 
-            Settings = new InstanceSettings();
+        private void OnMouseWheel(object sender, MouseEventArgs mouseEventArgs)
+        {
+            // todo: make zoom work..
+/*
+            if (mouseEventArgs.Delta < 1) {
+                Settings.Transform.ZoomFactor = Math.Min(5, Settings.Transform.ZoomFactor + 1);
+            } else {
+                Settings.Transform.ZoomFactor = Math.Max(1, Settings.Transform.ZoomFactor - 1);
+            }
+
+            ((HandledMouseEventArgs)mouseEventArgs).Handled = true;
+
+            mainPanel.Invalidate();
+ */
         }
 
         public void PropertyChanged(object sender, EventArgs args)
@@ -77,9 +140,9 @@ namespace NodeThing
         {
             var g = e.Graphics;
             var brush = new SolidBrush(mainPanel.BackColor);
-            Settings.Graph.Render(g, Settings.ScrollOffset);
+            Settings.Graph.Render(g, Settings.Transform);
 
-            _currentState.Render(g, Settings.ScrollOffset);
+            _currentState.Render(g, Settings.Transform.ScrollOffset, Settings.Transform.ZoomFactor);
         }
 
         private void nodeList_SelectedValueChanged(object sender, EventArgs e)
@@ -100,37 +163,9 @@ namespace NodeThing
         private void mainPanel_MouseDown(object sender, MouseEventArgs e)
         {
             _currentState = _currentState.MouseDown(sender, e);
-        }
 
-        private void saveToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            try {
-                var ds = new DataContractSerializer(typeof (InstanceSettings), _knownTypes);
-                var settings = new XmlWriterSettings() { Indent = true };
-                using (var x = XmlWriter.Create(@"c:\temp\tjong.xml", settings)) {
-                    ds.WriteObject(x, Settings);
-                }
-            } catch (IOException) {
-
-            }
-        }
-
-        private void loadToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            var ds = new DataContractSerializer(typeof(InstanceSettings), _knownTypes);
-            using (var fileStream = new FileStream(@"c:\temp\tjong.xml", FileMode.Open, FileAccess.Read, FileShare.Read)) {
-                Settings = (InstanceSettings)ds.ReadObject(fileStream);
-                Settings.Graph.SetPropertyListener(PropertyChanged);
-            }
-
-            mainPanel.AutoScrollMinSize = Settings.CanvasSize;
-            mainPanel_Scroll(this, new ScrollEventArgs(ScrollEventType.LargeIncrement, Settings.ScrollOffset.X, ScrollOrientation.HorizontalScroll));
-            mainPanel_Scroll(this, new ScrollEventArgs(ScrollEventType.LargeIncrement, Settings.ScrollOffset.Y, ScrollOrientation.VerticalScroll));
-        }
-
-        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            Application.Exit();
+            // Need to set focus here to get mouse wheel to work
+            mainPanel.Focus();
         }
 
         protected void ClearCreateObject()
@@ -270,34 +305,41 @@ namespace NodeThing
 
         private void mainPanel_Scroll(object sender, ScrollEventArgs e)
         {
-            Settings.ScrollOffset = e.ScrollOrientation == ScrollOrientation.HorizontalScroll
-                ? new Point(e.NewValue, Settings.ScrollOffset.Y) : new Point(Settings.ScrollOffset.X, e.NewValue);
-            mainPanel.AutoScrollPosition = new Point(Settings.ScrollOffset.X, Settings.ScrollOffset.Y);
+            Settings.Transform.ScrollOffset = e.ScrollOrientation == ScrollOrientation.HorizontalScroll
+                ? new Point(e.NewValue, Settings.Transform.ScrollOffset.Y) : new Point(Settings.Transform.ScrollOffset.X, e.NewValue);
+            mainPanel.AutoScrollPosition = new Point(Settings.Transform.ScrollOffset.X, Settings.Transform.ScrollOffset.Y);
             mainPanel.Invalidate();
-        }
-
-        public Point PointToScrolled(Point pt)
-        {
-            // convert a point in client space to a point in virtual mainPanel space
-            return new Point(pt.X + Settings.ScrollOffset.X, pt.Y + Settings.ScrollOffset.Y);
         }
 
         public void MultiSelect(Point topLeft, Point bottomRight)
         {
-            var tl = PointMath.Add(topLeft, Settings.ScrollOffset);
-            var rel = PointMath.Sub(bottomRight, topLeft);
-            var rect = new Rectangle(PointMath.Add(topLeft, Settings.ScrollOffset), new Size(rel.X, rel.Y));
+            topLeft = Settings.Transform.PointToScrolled(topLeft);
+            bottomRight = Settings.Transform.PointToScrolled(bottomRight);
+            var size = PointMath.Diff(bottomRight, topLeft);
+            var rect = new Rectangle(topLeft, size);
             foreach (var n in Settings.Graph.NodesInsideRect(rect)) {
                 n.Selected = true;
                 _selectedNodes.Add(n);
             }
         }
 
+        public void OnMoveSelected(int dx, int dy)
+        {
+            dx = Settings.Transform.ZoomFactor * dx;
+            dy = Settings.Transform.ZoomFactor * dy;
+
+            foreach (var n in _selectedNodes) {
+                n.Pos = new Point(n.Pos.X + dx, n.Pos.Y + dy);
+            }
+
+            mainPanel.Invalidate();
+        }
+
         public void OnPan(int dx, int dy)
         {
             var canvasSize = mainPanel.AutoScrollMinSize;
-            var scrollX = Settings.ScrollOffset.X + dx;
-            var scrollY = Settings.ScrollOffset.Y + dy;
+            var scrollX = Settings.Transform.ScrollOffset.X + dx;
+            var scrollY = Settings.Transform.ScrollOffset.Y + dy;
 
             if (dx < 0) {
 
@@ -312,7 +354,7 @@ namespace NodeThing
 
             } else if (dx > 0) {
                 // Check if we need to expand the canvas to the right
-                // Settings.ScrollOffset.X + dx + mainPanel.Size.Width > canvasSize.Width
+                // Settings.Transform.ScrollOffset.X + dx + mainPanel.Size.Width > canvasSize.Width
                 if (scrollX + mainPanel.Size.Width > canvasSize.Width) {
                     mainPanel.AutoScrollMinSize = new Size(scrollX + mainPanel.Size.Width, canvasSize.Height);
                 }
@@ -338,7 +380,7 @@ namespace NodeThing
                 mainPanel_Scroll(this, new ScrollEventArgs(ScrollEventType.LargeIncrement, scrollY, ScrollOrientation.VerticalScroll));
             }
 
-            Settings.CanvasSize = mainPanel.AutoScrollMinSize;
+            Settings.Transform.CanvasSize = mainPanel.AutoScrollMinSize;
         }
 
         private void cropToolStripMenuItem_Click(object sender, EventArgs e)
@@ -350,10 +392,80 @@ namespace NodeThing
             Settings.Graph.MoveNodes(-rect.Left, -rect.Top);
             var size = new Size(rect.Width, rect.Height);
             mainPanel.AutoScrollMinSize = size;
-            Settings.CanvasSize = size;
+            Settings.Transform.CanvasSize = size;
 
             mainPanel_Scroll(this, new ScrollEventArgs(ScrollEventType.LargeDecrement, 0, ScrollOrientation.HorizontalScroll));
             mainPanel_Scroll(this, new ScrollEventArgs(ScrollEventType.LargeDecrement, 0, ScrollOrientation.VerticalScroll));
+
+        }
+
+        private void MainForm_Load(object sender, EventArgs e)
+        {
+            mainPanel.AutoScrollMinSize = mainPanel.Size;
+        }
+
+        private void SaveFile()
+        {
+            try{ 
+                var ds = new DataContractSerializer(typeof(InstanceSettings), _knownTypes);
+                var settings = new XmlWriterSettings() { Indent = true };
+                using (var x = XmlWriter.Create(_currentFilename, settings)) {
+                    ds.WriteObject(x, Settings);
+                }
+            } catch (IOException) {
+
+            }
+        }
+
+        private void saveAsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var saveDlg = new SaveFileDialog {OverwritePrompt = true};
+            if (saveDlg.ShowDialog() != DialogResult.OK)
+                return;
+
+            _currentFilename = saveDlg.FileName;
+            SaveFile();
+        }
+
+        private void saveToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if (_currentFilename == null) {
+                saveAsToolStripMenuItem_Click(sender, e);
+            } else {
+                SaveFile();
+            }
+        }
+
+        private void loadToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
+            var openDlg = new OpenFileDialog {Filter = "Xml files (*.xml)|*.xml|All Files (*.*)|*.*", FileName = "", CheckFileExists = true, CheckPathExists = true};
+
+            if (openDlg.ShowDialog() != DialogResult.OK)
+                return;
+
+            var dir = new FileInfo(openDlg.FileName).DirectoryName;
+
+            _currentFilename = openDlg.FileName;
+
+            var ds = new DataContractSerializer(typeof(InstanceSettings), _knownTypes);
+            using (var fileStream = new FileStream(_currentFilename, FileMode.Open, FileAccess.Read, FileShare.Read)) {
+                Settings = (InstanceSettings)ds.ReadObject(fileStream);
+                Settings.Graph.SetPropertyListener(PropertyChanged);
+            }
+
+            mainPanel.AutoScrollMinSize = Settings.Transform.CanvasSize;
+            mainPanel_Scroll(this, new ScrollEventArgs(ScrollEventType.LargeIncrement, Settings.Transform.ScrollOffset.X, ScrollOrientation.HorizontalScroll));
+            mainPanel_Scroll(this, new ScrollEventArgs(ScrollEventType.LargeIncrement, Settings.Transform.ScrollOffset.Y, ScrollOrientation.VerticalScroll));
+        }
+
+        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Application.Exit();
+        }
+
+        private void exportToolStripMenuItem_Click(object sender, EventArgs e)
+        {
 
         }
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Runtime.Serialization;
 
 namespace NodeThing
@@ -148,9 +149,10 @@ namespace NodeThing
             return new Rectangle(new Point(Pos.X - _connectionRadius, Pos.Y), new Size(_width + _connectionDiameter, _height + _headerHeight));
         }
 
-        public void Render(Graphics g, Point scrollOffset)
+        public void Render(Graphics g, MainForm.ClientTransform transform)
         {
-            g.TranslateTransform(Pos.X - scrollOffset.X, Pos.Y - scrollOffset.Y);
+            g.TranslateTransform(Pos.X - transform.ScrollOffset.X, Pos.Y - transform.ScrollOffset.Y);
+            g.ScaleTransform(1.0f / transform.ZoomFactor, 1.0f / transform.ZoomFactor, MatrixOrder.Append);
 
             if (_needsUpdate) {
                 _needsUpdate = false;
