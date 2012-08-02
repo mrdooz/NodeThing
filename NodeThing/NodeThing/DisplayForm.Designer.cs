@@ -1,4 +1,5 @@
-﻿namespace NodeThing
+﻿using System.Windows.Forms;
+namespace NodeThing
 {
     partial class DisplayForm
     {
@@ -27,68 +28,58 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.displayPanel = new System.Windows.Forms.Panel();
-            this.splitContainer1 = new System.Windows.Forms.SplitContainer();
-            this.previewPanel = new System.Windows.Forms.Panel();
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
-            this.splitContainer1.Panel1.SuspendLayout();
-            this.splitContainer1.Panel2.SuspendLayout();
-            this.splitContainer1.SuspendLayout();
+            this.flowLayoutPanel = new System.Windows.Forms.FlowLayoutPanel();
+            this.previewPanel = new NodeThing.DoublBufferedPanel();
+            this.sinkPanel = new NodeThing.DoublBufferedPanel();
+            this.flowLayoutPanel.SuspendLayout();
             this.SuspendLayout();
             // 
-            // displayPanel
+            // flowLayoutPanel
             // 
-            this.displayPanel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.displayPanel.Location = new System.Drawing.Point(0, 0);
-            this.displayPanel.Name = "displayPanel";
-            this.displayPanel.Size = new System.Drawing.Size(416, 474);
-            this.displayPanel.TabIndex = 0;
-            // 
-            // splitContainer1
-            // 
-            this.splitContainer1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.splitContainer1.Location = new System.Drawing.Point(0, 0);
-            this.splitContainer1.Name = "splitContainer1";
-            // 
-            // splitContainer1.Panel1
-            // 
-            this.splitContainer1.Panel1.Controls.Add(this.previewPanel);
-            // 
-            // splitContainer1.Panel2
-            // 
-            this.splitContainer1.Panel2.Controls.Add(this.displayPanel);
-            this.splitContainer1.Size = new System.Drawing.Size(792, 474);
-            this.splitContainer1.SplitterDistance = 372;
-            this.splitContainer1.TabIndex = 1;
+            this.flowLayoutPanel.AutoScroll = true;
+            this.flowLayoutPanel.AutoSize = true;
+            this.flowLayoutPanel.Controls.Add(this.previewPanel);
+            this.flowLayoutPanel.Controls.Add(this.sinkPanel);
+            this.flowLayoutPanel.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.flowLayoutPanel.Location = new System.Drawing.Point(0, 0);
+            this.flowLayoutPanel.Name = "flowLayoutPanel";
+            this.flowLayoutPanel.Size = new System.Drawing.Size(1084, 562);
+            this.flowLayoutPanel.TabIndex = 2;
             // 
             // previewPanel
             // 
-            this.previewPanel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.previewPanel.Location = new System.Drawing.Point(0, 0);
+            this.previewPanel.Location = new System.Drawing.Point(3, 3);
             this.previewPanel.Name = "previewPanel";
-            this.previewPanel.Size = new System.Drawing.Size(372, 474);
-            this.previewPanel.TabIndex = 2;
+            this.previewPanel.Size = new System.Drawing.Size(512, 512);
+            this.previewPanel.TabIndex = 0;
+            // 
+            // sinkPanel
+            // 
+            this.sinkPanel.Location = new System.Drawing.Point(521, 3);
+            this.sinkPanel.Name = "sinkPanel";
+            this.sinkPanel.Size = new System.Drawing.Size(512, 512);
+            this.sinkPanel.TabIndex = 1;
             // 
             // DisplayForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(792, 474);
-            this.Controls.Add(this.splitContainer1);
+            this.AutoSize = true;
+            this.ClientSize = new System.Drawing.Size(1084, 562);
+            this.Controls.Add(this.flowLayoutPanel);
             this.Name = "DisplayForm";
             this.Text = "DisplayForm";
-            this.splitContainer1.Panel1.ResumeLayout(false);
-            this.splitContainer1.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
-            this.splitContainer1.ResumeLayout(false);
+            this.flowLayoutPanel.ResumeLayout(false);
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
 
         #endregion
 
-        private System.Windows.Forms.Panel displayPanel;
-        private System.Windows.Forms.SplitContainer splitContainer1;
-        private System.Windows.Forms.Panel previewPanel;
+        //private DoubleBufferedFlowLayoutPanel flowLayoutPanel;
+        private FlowLayoutPanel flowLayoutPanel;
+        private DoublBufferedPanel previewPanel;
+        private DoublBufferedPanel sinkPanel;
     }
 }

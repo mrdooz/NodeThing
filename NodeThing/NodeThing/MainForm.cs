@@ -252,6 +252,14 @@ namespace NodeThing
                     {
                         _redrawTimer.Stop();
 
+                        var seqs = Settings.Graph.GenerateCodeFromSelected2(node, new Size(512, 512));
+                        _displayForm.BeginAddPanels();
+                        foreach (var s in seqs) {
+                            var handle = s.IsPreview ? _displayForm.GetPreviewHandle() : _displayForm.GetSinkHandle();
+                            _factory.GenerateCode(s, handle);
+                        }
+                        _displayForm.EndAddPanels();
+/*
                         var seq = Settings.Graph.GenerateCodeFromSelected(node);
                         Debug.WriteLine("property node: {0}", node.Name);
                         if (seq.Sequence.Count > 0) {
@@ -259,6 +267,7 @@ namespace NodeThing
                             seq.Size = new Size(512, 512);
                             _factory.GenerateCode(seq, _displayForm.PreviewHandle());
                         }
+ */
                     };
                     _redrawTimer.Start();
                 }
@@ -302,6 +311,7 @@ namespace NodeThing
 
         private void GenerateCode()
         {
+/*
             var code = Settings.Graph.GenerateCode();
             var displayedReal = false;
             var displayedPreview = false;
@@ -318,6 +328,7 @@ namespace NodeThing
                     }
                 }
             }
+ */
         }
 
         private void mainPanel_Scroll(object sender, ScrollEventArgs e)

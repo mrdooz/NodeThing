@@ -101,7 +101,7 @@ namespace NodeThing
             return res;
         }
 
-        public GeneratorSequence GenerateCode(GraphNode root)
+        private GeneratorSequence GenerateCode(GraphNode root)
         {
             var sorted = TopologicalSort(root);
 
