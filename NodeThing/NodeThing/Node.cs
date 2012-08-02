@@ -9,17 +9,18 @@ namespace NodeThing
     [DataContract(IsReference = true)]
     public class Node
     {
-        private Brush _blackBrush = new SolidBrush(Color.Black);
-        private Font _font = new Font("Arial", 7);
+        private Brush _blackBrush;
+        private Font _font;
 
-        private static int _padding = 10;
-        private static int _connectionHeight = 25;
-        private static int _connectionRadius = 5;
-        private static int _connectionDiameter = 2 * _connectionRadius;
-        private static int _headerHeight = 20;
+        private static int _padding;
+        private static int _connectionHeight;
+        private static int _connectionRadius;
+        private static int _connectionDiameter;
+        private static int _headerHeight;
+        private bool _needsUpdate;
+
         private int _width;
         private int _height;
-        private bool _needsUpdate = true;
 
         [DataMember]
         public string Name { get; set; }
@@ -47,6 +48,9 @@ namespace NodeThing
         {
             Inputs = new List<Connection>();
             Properties = new Dictionary<string, NodePropertyBase>();
+
+            var nullContext = new StreamingContext();
+            OnDeserializerd(nullContext);
         }
 
         private int CalcWidth(Graphics g)

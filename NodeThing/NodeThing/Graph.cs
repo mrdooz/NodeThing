@@ -16,8 +16,22 @@ namespace NodeThing
         [DataMember]
         List<Node> _nodes = new List<Node>();
 
-        private Pen _connectionPen = new Pen(Color.Black, 2);
-        private Pen _selectedConnectionPen = new Pen(Color.CornflowerBlue, 2);
+        private Pen _connectionPen;
+        private Pen _selectedConnectionPen;
+
+        public Graph()
+        {
+            var nullContext = new StreamingContext();
+            OnDeserializerd(nullContext);
+        }
+
+        [OnDeserialized]
+        private void OnDeserializerd(StreamingContext sc)
+        {
+            _connectionPen = new Pen(Color.Black, 2);
+            _selectedConnectionPen = new Pen(Color.CornflowerBlue, 2);
+        }
+
 
         private void RenderNode(GraphNode root, Graphics g, MainForm.ClientTransform transform)
         {
@@ -166,7 +180,7 @@ namespace NodeThing
                     parent.Children[i] = null;
                     parent.Node.Inputs[i].Used = false;
 
-                    child.Parent = null;
+                    child.Parents.Remove(parent);
                     child.Node.Output.Used = false;
 
                     // Add the nodes to the roots list if needed
@@ -200,18 +214,18 @@ namespace NodeThing
             // Disconnect from any children
             foreach (var c in graphNode.Children) {
                 if (c != null) {
-                    c.Parent = null;
+                    c.Parents.Remove(graphNode);
                     c.Node.Output.Used = false;
                     _roots.Add(c);
                 }
             }
 
-            // Disconnect from parent
-            if (graphNode.Parent != null) {
-                for (var i = 0; i < graphNode.Parent.Children.Count(); ++i) {
-                    if (graphNode.Parent.Children[i] == graphNode) {
-                        graphNode.Parent.Children[i] = null;
-                        graphNode.Parent.Node.Inputs[i].Used = false;
+            // Disconnect from parents
+            foreach (var p in graphNode.Parents) {
+                for (var i = 0; i < p.Children.Count(); ++i) {
+                    if (p.Children[i] == graphNode) {
+                        p.Children[i] = null;
+                        p.Node.Inputs[i].Used = false;
                         break;
                     }
                 }
@@ -260,42 +274,69 @@ namespace NodeThing
             var p = FindNode(parent);
 
             p.Children[parentSlot] = c;
-            c.Parent = p;
+            c.Parents.Add(p);
 
             _roots.RemoveAll(a => a == c);
         }
 
-        private GraphNode FindSelectedChild(GraphNode node)
+        private GraphNode FindSelectedNode(GraphNode node)
         {
             if (node.Node.Selected)
                 return node;
 
-            foreach (var c in node.Children) {
-                if (c != null) {
-                    var res = FindSelectedChild(c);
-                    if (res != null)
-                        return res;
-                }
+            foreach (var c in node.Children.Where(c => c != null)) {
+                var res = FindSelectedNode(c);
+                if (res != null)
+                    return res;
             }
             return null;
         }
 
         public GeneratorSequence GenerateCodeFromSelected(Node selected)
         {
-            // If selecting a sink, use its child instead as sinks are really just sentinels..
             GraphNode root;
             if (selected.IsSink()) {
-                if (selected.Inputs.Count != 1)
-                    return new GeneratorSequence();
-                root = FindNode(selected).Children[0];
+                // If selecting a sink, use its child instead as sinks are really just sentinels..
+                root = selected.Inputs.Count == 1 ? FindNode(selected).Children[0] : null;
             } else {
                 root = FindNode(selected);
             }
-            if (root == null)
-                return new GeneratorSequence();
-            return TopologicalSorter.SequenceFromNode(root);
+
+            return root != null ? TopologicalSorter.SequenceFromNode(root) : new GeneratorSequence();
         }
 
+        private List<GraphNode> FindRoots(GraphNode node)
+        {
+            return null;
+            var res = new List<GraphNode>();
+            var nodes = new Stack<GraphNode>();
+            nodes.Push(node);
+            while (nodes.Count > 0) {
+                var cur = nodes.Pop();
+/*
+                if (cur.Parent == null) {
+                    
+                }
+ */
+            }
+
+            //if (node.Parent )
+        }
+/*
+        public List<GeneratorSequence> GenerateCodeFromSelected2(Node selected)
+        {
+            // Generates sequences for the selected node, as well as any roots in the graph
+            GraphNode root;
+            if (selected.IsSink()) {
+                // If selecting a sink, use its child instead as sinks are really just sentinels..
+                root = selected.Inputs.Count == 1 ? FindNode(selected).Children[0] : null;
+            } else {
+                root = FindNode(selected);
+            }
+
+            return root != null ? TopologicalSorter.SequenceFromNode(root) : new GeneratorSequence();
+        }
+*/
 
         public List<GeneratorSequence> GenerateCode()
         {
@@ -307,9 +348,7 @@ namespace NodeThing
                 if (r.Node.IsSink()) {
                     var root = r.Children[0];
                     if (root != null) {
-                        var size = r.Node.GetProperty<Size>("Size");
-                        var name = r.Node.GetProperty<string>("Name");
-                        var selectedChild = FindSelectedChild(root);
+                        var selectedChild = FindSelectedNode(root);
 
                         var seq = TopologicalSorter.SequenceFromNode(root);
                         seq.IsPreview = false;
@@ -323,6 +362,7 @@ namespace NodeThing
                 } else {
                     // Node isn't a proper sink, so we generate a preview
                     var seq = TopologicalSorter.SequenceFromNode(r);
+                    seq.IsPreview = true;
                     res.Add(seq);
                 }
 
@@ -334,25 +374,27 @@ namespace NodeThing
     [DataContract(IsReference = true)]
     public class GraphNode
     {
-        [DataMember]
-        public Node Node { get; set; }
-
-        [DataMember]
-        public GraphNode Parent { get; set; }
-
-        [DataMember]
-        public GraphNode[] Children { get; private set; }
-
         public GraphNode(Node n)
         {
             Node = n;
             Children = new GraphNode[n.Inputs.Count];
+            Parents = new List<GraphNode>();
         }
+
+        [DataMember]
+        public Node Node { get; set; }
+
+        [DataMember]
+        public List<GraphNode> Parents { get; set; }
+
+        [DataMember]
+        public GraphNode[] Children { get; private set; }
+
 
         public bool IsRootNode()
         {
             // A node is a root node if it doesn't have a parent
-            return Parent == null;
+            return Parents.Count == 0;
         }
     }
 }

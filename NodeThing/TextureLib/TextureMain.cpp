@@ -211,7 +211,7 @@ extern "C" {
     rd->height = height;
     rd->numTextures = numTextures;
     rd->finalTexture = finalTexture;
-    rd->name = name;
+    rd->name = name ? name : "";
     rd->opCodes.resize(opCodeLen);
     memcpy(rd->opCodes.data(), opCodes, opCodeLen);
 

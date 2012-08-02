@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.Serialization;
 using System.Windows.Forms;
@@ -26,7 +27,8 @@ namespace NodeThing
         private List<Tuple<Connection, Connection>> _selectedConnections = new List<Tuple<Connection, Connection>>();
 
         private DisplayForm _displayForm;
-        private Timer _redrawTimer = new Timer();
+        private Timer _redrawTimer;
+        private Node _redrawTimeNode;
 
         private string _currentFilename;
 
@@ -226,15 +228,37 @@ namespace NodeThing
         protected void NodeSelected(Node node)
         {
             flowLayoutPanel1.Controls.Clear();
+            Debug.WriteLine("selected node: {0}", node.Name);
 
             var propertyChanged = new EventHandler(delegate {
-                // Limit the code gen to 10 fps
-                if (!_redrawTimer.Enabled) {
-                    _redrawTimer.Interval = 100;
+
+                bool newTimer = true;
+                if (_redrawTimer != null && _redrawTimer.Enabled) {
+                    // start a new timer if we don't already have one in flight for the current node
+                    if (_redrawTimeNode == node) {
+                        newTimer = false;
+                    } else {
+                        _redrawTimer.Stop();
+                    }
+                }
+
+                if (newTimer) {
+
+                    _redrawTimeNode = node;
+
+                    // Limit the code gen to 10 fps
+                    _redrawTimer = new Timer { Interval = 100 };
                     _redrawTimer.Tick += delegate
                     {
                         _redrawTimer.Stop();
-                        GenerateCode();
+
+                        var seq = Settings.Graph.GenerateCodeFromSelected(node);
+                        Debug.WriteLine("property node: {0}", node.Name);
+                        if (seq.Sequence.Count > 0) {
+                            seq.Name = "Preview";
+                            seq.Size = new Size(512, 512);
+                            _factory.GenerateCode(seq, _displayForm.PreviewHandle());
+                        }
                     };
                     _redrawTimer.Start();
                 }
@@ -267,12 +291,8 @@ namespace NodeThing
                     flowLayoutPanel1.Controls.Add(editor);
             }
 
-            var seq = Settings.Graph.GenerateCodeFromSelected(node);
-            if (seq.Sequence.Count > 0) {
-                seq.Name = "Preview";
-                seq.Size = new Size(512, 512);
-                _factory.GenerateCode(seq, _displayForm.PreviewHandle());
-            }
+            // trigger initial update
+            propertyChanged(null, null);
         }
 
         private void generateToolStripMenuItem_Click(object sender, EventArgs e)
@@ -465,5 +485,15 @@ namespace NodeThing
 
         }
 
+    }
+
+    public class EventArgs<T> : EventArgs
+    {
+        public EventArgs(T value)
+        {
+            Value = value;
+        }
+
+        public T Value { get; private set; }
     }
 }

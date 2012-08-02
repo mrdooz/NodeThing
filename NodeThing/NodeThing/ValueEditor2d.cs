@@ -69,6 +69,7 @@ namespace NodeThing
 
         private void UpdateTextBox()
         {
+            _updatingTextbox = true;
             if (_property.PropertyType == PropertyType.Float2) {
                 var prop = (NodeProperty<Tuple<float, float>>)_property;
                 textBox1.Text = prop.Value.Item1.ToString();
@@ -84,6 +85,7 @@ namespace NodeThing
                 textBox1.Text = prop.Value.Width.ToString();
                 textBox2.Text = prop.Value.Height.ToString();
             }
+            _updatingTextbox = false;
         }
 
         private void drawPanel_MouseDown(object sender, MouseEventArgs e)

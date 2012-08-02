@@ -18,7 +18,7 @@ namespace NodeThing
         {
             InitializeComponent();
             _property = property;
-            textBox.Text = _property.ToString();
+            UpdateTextBox();
             groupBox1.Text = name;
             ValueChanged += handler;
 
@@ -37,6 +37,13 @@ namespace NodeThing
             g.FillRectangle(Brushes.Black, 0, 0, drawPanel.Width, drawPanel.Height);
         }
 
+        private void UpdateTextBox()
+        {
+            _updatingTextbox = true;
+            textBox.Text = _property.ToString();
+            _updatingTextbox = false;
+        }
+
         private void SetValue<T>(T value, NodePropertyBase prop) where T : IComparable<T>
         {
             var p = (NodeProperty<T>)prop;
@@ -51,8 +58,7 @@ namespace NodeThing
             p.Value = value;
 
             if (value.CompareTo(orgValue) != 0) {
-                _updatingTextbox = true;
-                textBox.Text = value.ToString();
+                UpdateTextBox();
             }
         }
 
