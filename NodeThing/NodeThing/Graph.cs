@@ -242,7 +242,7 @@ namespace NodeThing
             _roots.Add(new GraphNode(node));
         }
 
-        GraphNode FindNode(Node node)
+        private GraphNode FindNode(Node node)
         {
             foreach (var r in _roots) {
                 var f = FindNodeInner(r, node);
@@ -252,7 +252,7 @@ namespace NodeThing
             return null;
         }
 
-        GraphNode FindNodeInner(GraphNode root, Node node)
+        private GraphNode FindNodeInner(GraphNode root, Node node)
         {
             if (root.Node == node)
                 return root;

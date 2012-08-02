@@ -23,6 +23,9 @@ HANDLE gCloseEvent = INVALID_HANDLE_VALUE;
 HANDLE gNewDataEvent = INVALID_HANDLE_VALUE;
 CRITICAL_SECTION gRenderCs;
 
+typedef void(__stdcall *fnCompletedCallback)(HWND hwnd);
+fnCompletedCallback gCompletedCallback;
+
 static void *funcPtrs[] = {
   &source_solid,
   &source_noise,
@@ -145,6 +148,7 @@ DWORD WINAPI renderThread(void *param) {
       }
     }
 
+    HWND hwnd = data->hwnd;
     HDC src_dc = CreateCompatibleDC(dc);
     SelectObject(src_dc, bm);
     BitBlt(dc, 0, 0, 512, 512, src_dc, 0, 0, SRCCOPY);
@@ -152,8 +156,7 @@ DWORD WINAPI renderThread(void *param) {
     DeleteDC(src_dc);
     DeleteObject(bm);
 
-    ReleaseDC(data->hwnd, dc);
-
+    ReleaseDC(hwnd, dc);
 
     for (int i = 0; i < data->numTextures; ++i) {
       delete [] gTextures[i]->data;
@@ -161,16 +164,20 @@ DWORD WINAPI renderThread(void *param) {
     }
 
     delete [] gTextures;
-
-
     delete data;
+
+    gCompletedCallback(hwnd);
+
   }
   return 0;
 }
 
 extern "C" {
 
-  __declspec(dllexport) bool initTextureLib() {
+  __declspec(dllexport) bool initTextureLib(fnCompletedCallback completedCallback) {
+
+    gCompletedCallback = completedCallback;
+
     gHeapHandle = HeapCreate(HEAP_CREATE_ENABLE_EXECUTE, 32*1024, 128*1024);
     if (gHeapHandle == INVALID_HANDLE_VALUE)
       return false;

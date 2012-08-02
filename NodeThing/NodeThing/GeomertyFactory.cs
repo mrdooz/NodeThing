@@ -8,7 +8,7 @@ namespace NodeThing
 {
     public class GeometryFactory : NodeFactory
     {
-        public GeometryFactory()
+        public GeometryFactory(CompletedCallback callback) : base(callback)
         {
             AddNodeName("Cube", 0);
             AddNodeName("Array", 1);

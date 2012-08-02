@@ -6,8 +6,13 @@ namespace NodeThing
 {
     public abstract class NodeFactory
     {
-        protected NodeFactory()
+        public delegate void CompletedCallback(IntPtr hwnd);
+
+        protected CompletedCallback _completedCallback;
+
+        protected NodeFactory(CompletedCallback callback)
         {
+            _completedCallback = callback;
             AddNodeName("Sink", -1);
         }
 

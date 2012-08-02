@@ -9,19 +9,18 @@ namespace NodeThing
 {
     class TextureFactory : NodeFactory
     {
-
         [DllImport("TextureLib.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
-        private static extern void renderTexture(IntPtr hwnd, int width, int height, int numTextures, int finalTexture, [MarshalAs(UnmanagedType.LPStr)]String name, int opCodeLen, byte[] opCodes);
-
-        [DllImport("TextureLib.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
-        private static extern bool initTextureLib();
+        private static extern bool initTextureLib(MulticastDelegate callback);
 
         [DllImport("TextureLib.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
         private static extern bool closeTextureLib();
 
-        public TextureFactory()
+        [DllImport("TextureLib.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+        private static extern void renderTexture(IntPtr hwnd, int width, int height, int numTextures, int finalTexture, [MarshalAs(UnmanagedType.LPStr)]String name, int opCodeLen, byte[] opCodes);
+
+        public TextureFactory(CompletedCallback callback) : base(callback)
         {
-            initTextureLib();
+            initTextureLib(_completedCallback);
 
             AddNodeName("Solid", 0);
             AddNodeName("Noise", 1);
@@ -193,8 +192,6 @@ namespace NodeThing
                 var finalTexture = seq.Sequence.LastOrDefault().DstTextureIdx;
                 renderTexture(displayHandle, seq.Size.Width, seq.Size.Height, seq.NumTextures, finalTexture, seq.Name, opCodeArray.Count(), opCodeArray);
             }
-
         }
-
     }
 }

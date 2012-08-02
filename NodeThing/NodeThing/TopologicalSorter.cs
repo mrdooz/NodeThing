@@ -28,7 +28,7 @@ namespace NodeThing
             return top.GenerateCode(root);
         }
        
-        private TopoNode CreateGraph(GraphNode root, TopoNode parent, Dictionary<GraphNode, TopoNode> nodes, ref List<TopoNode> leaf)
+        private TopoNode CreateGraph(GraphNode root, TopoNode parent, ref Dictionary<GraphNode, TopoNode> nodes, ref List<TopoNode> leaf)
         {
             TopoNode node;
             bool newNode = false;
@@ -46,7 +46,7 @@ namespace NodeThing
             if (newNode) {
                 foreach (var c in root.Children) {
                     if (c != null) {
-                        node.Children.Add(CreateGraph(c, node, nodes, ref leaf));
+                        node.Children.Add(CreateGraph(c, node, ref nodes, ref leaf));
                     }
                 }
             }
@@ -76,7 +76,7 @@ namespace NodeThing
         {
             var nodes = new Dictionary<GraphNode, TopoNode>();
             var leaf = new List<TopoNode>();
-            var g = CreateGraph(root, null, nodes, ref leaf);
+            var g = CreateGraph(root, null, ref nodes, ref leaf);
             SetDepth(g, null);
 
             var res = new List<TopoNode>();
@@ -86,17 +86,18 @@ namespace NodeThing
                 // pick the leaf with the greatest depth
                 leaf.Sort((a, b) => a.Depth > b.Depth ? -1 : 1);
                 var head = leaf[0];
-                res.Add(head);
                 leaf.RemoveAt(0);
+                if (!processed.Contains(head)) {
+                    res.Add(head);
+                    processed.Add(head);
 
-                processed.Add(head);
-                // Check if any of the head's parents are leaf now
-                foreach (var p in head.Parents) {
-                    bool isLeaf = p.Children.All(processed.Contains);
-                    if (isLeaf)
-                        leaf.Add(p);
+                    // Check if any of the head's parents are leaf now
+                    foreach (var p in head.Parents) {
+                        bool isLeaf = p.Children.All(processed.Contains);
+                        if (isLeaf)
+                            leaf.Add(p);
+                    }
                 }
-
             }
             return res;
         }

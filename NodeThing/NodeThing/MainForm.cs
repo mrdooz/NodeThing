@@ -18,7 +18,7 @@ namespace NodeThing
             typeof (NodeProperty<Tuple<float, float>>)
         };
 
-        private NodeFactory _factory = new TextureFactory();
+        private NodeFactory _factory;
         private string _createNode;
 
         private StateBase _currentState;
@@ -106,6 +106,7 @@ namespace NodeThing
 
             _displayForm = new DisplayForm();
             _displayForm.Show();
+            _factory = new TextureFactory(_displayForm.OnTextureCompleted);
 
             foreach (var item in _factory.NodeNames())
                 nodeList.Items.Add(item);
@@ -255,7 +256,7 @@ namespace NodeThing
                         var seqs = Settings.Graph.GenerateCodeFromSelected2(node, new Size(512, 512));
                         _displayForm.BeginAddPanels();
                         foreach (var s in seqs) {
-                            var handle = s.IsPreview ? _displayForm.GetPreviewHandle() : _displayForm.GetSinkHandle();
+                            var handle = s.IsPreview ? _displayForm.GetPreviewHandle() : _displayForm.GetSinkHandle(s.Name);
                             _factory.GenerateCode(s, handle);
                         }
                         _displayForm.EndAddPanels();
@@ -495,7 +496,6 @@ namespace NodeThing
         {
 
         }
-
     }
 
     public class EventArgs<T> : EventArgs
