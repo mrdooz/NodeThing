@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <deque>
+#include <map>
 #include "TextureLib.hpp"
 
 using namespace std;
@@ -42,7 +43,8 @@ struct RenderData {
   vector<uint8> opCodes;
 };
 
-deque<RenderData *> gRenderQueue;
+// One queue per HWND
+map<HWND, deque<RenderData *> >gRenderQueue;
 
 DWORD WINAPI renderThread(void *param) {
 
@@ -67,14 +69,22 @@ DWORD WINAPI renderThread(void *param) {
     }
 
     EnterCriticalSection(&gRenderCs);
-    RenderData *data = gRenderQueue.empty() ? nullptr : gRenderQueue.front();
-    gRenderQueue.clear();
+    // get data from the first non empty queue
+    RenderData *data = nullptr;
+    for (auto it = begin(gRenderQueue); it != end(gRenderQueue); /**/) {
+      auto &q = it->second;
+      if (!q.empty()) {
+        data = q.front();
+      }
+
+      it = gRenderQueue.erase(it);
+      if (data)
+        break;
+    }
     LeaveCriticalSection(&gRenderCs);
 
-    if (!data) {
-      delete data;
+    if (!data)
       continue;
-    }
 
     gTextures = new Texture *[data->numTextures];
     for (int i = 0; i < data->numTextures; ++i) {
@@ -216,7 +226,7 @@ extern "C" {
     memcpy(rd->opCodes.data(), opCodes, opCodeLen);
 
     EnterCriticalSection(&gRenderCs);
-    gRenderQueue.push_back(rd);
+    gRenderQueue[hwnd].push_back(rd);
     LeaveCriticalSection(&gRenderCs);
 
     SetEvent(gNewDataEvent);
