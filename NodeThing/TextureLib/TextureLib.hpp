@@ -5,6 +5,8 @@
 typedef uint32_t uint32;
 typedef uint8_t uint8;
 
+#define ASSERT(x) do { if (!x) _asm {int 3} } while(false);
+
 struct Texture {
   float *data;  // RGBA
   int width;

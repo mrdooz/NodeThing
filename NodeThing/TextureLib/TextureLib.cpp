@@ -6,9 +6,6 @@
 #include <stdint.h>
 #include <math.h>
 
-
-#define ASSERT(x) do { if (!x) _asm {int 3} } while(false);
-
 Texture **gTextures;
 
 Vector2 operator+(const Vector2 &a, const Vector2 &b) {
