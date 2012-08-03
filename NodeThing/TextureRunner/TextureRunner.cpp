@@ -11,6 +11,12 @@
 #define NO_SIZE_OPT
 #endif
 
+#ifdef NO_SIZE_OPT
+#define CHECK_HR(x) ASSERT(SUCCEEDED(x))
+#else
+#define CHECK_HR(x) x
+#endif
+
 static void *funcPtrs[] = {
   &source_solid,
   &source_noise,
@@ -141,10 +147,12 @@ void WINAPI fillTexture(D3DXVECTOR4* pOut, CONST D3DXVECTOR2* pTexCoord, CONST D
   int x = (int)((pTexCoord->x - pTexelSize->x/2) * w);
   int y = (int)((pTexCoord->y - pTexelSize->y/2) * h);
 
-  float *base = &t->data[4*(y*w+x)];
-  *pOut = D3DXVECTOR4(base);
-  D3DXVec4Minimize(pOut, pOut, &D3DXVECTOR4(1,1,1,1));
-  D3DXVec4Maximize(pOut, pOut, &D3DXVECTOR4(0,0,0,0));
+  float *dst = (float *)pOut;
+  float *src = &t->data[4*(y*w+x)];
+  for (int i = 0; i < 4; ++i) {
+    *dst++ = max(0, min(1, *src));
+    src++;
+  }
 }
 
 void createTexture(const void *raw, int len, IDirect3DTexture9 **texture) {
@@ -171,7 +179,6 @@ void createTexture(const void *raw, int len, IDirect3DTexture9 **texture) {
   _asm {
     call [mem];
   }
-
 
   // create the d3d texture, and fill it with the destination texture
   gDevice->CreateTexture(header->width, header->height, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, texture, nullptr);
@@ -211,88 +218,67 @@ void setTruncate() {
 
 void createMesh() {
 
-  if (FAILED(D3DXCreateMeshFVF(12, 24, D3DXMESH_MANAGED | D3DXMESH_32BIT, D3DFVF_XYZ | D3DFVF_TEX1, gDevice, &gMesh))) {
-    return;
-  }
+  CHECK_HR(D3DXCreateMeshFVF(12, 24, D3DXMESH_MANAGED | D3DXMESH_32BIT, D3DFVF_XYZ | D3DFVF_TEX1, gDevice, &gMesh));
 
 #pragma pack(push, 1)
-  struct PosTex {
-    Vector3 pos;
-    Vector2 tex;
-  };
-
-  struct Triangle {
-    Triangle(int a, int b, int c) : a(a), b(b), c(c) {}
-    int a, b, c;
-  };
 #pragma pack(pop)
 
-  PosTex *vb;
-  Triangle *ib;
+  float *vb;
+  int *ib;
   gMesh->LockVertexBuffer(0, (void **)&vb);
   gMesh->LockIndexBuffer(0, (void **)&ib);
 
-  Vector3 v0 = Vector3(-1, +1, -1);
-  Vector3 v1 = Vector3(+1, +1, -1);
-  Vector3 v2 = Vector3(-1, -1, -1);
-  Vector3 v3 = Vector3(+1, -1, -1);
+  static const char vtx[] = {
+    -1, +1, -1,
+    +1, +1, -1,
+    -1, -1, -1,
+    +1, -1, -1,
+    -1, +1, +1,
+    +1, +1, +1,
+    -1, -1, +1,
+    +1, -1, +1
+  };
 
-  Vector3 v4 = Vector3(-1, +1, +1);
-  Vector3 v5 = Vector3(+1, +1, +1);
-  Vector3 v6 = Vector3(-1, -1, +1);
-  Vector3 v7 = Vector3(+1, -1, +1);
+  static const char quad_vtx[] = {
+    0*3, 1*3, 2*3, 3*3,
+    1*3, 5*3, 3*3, 7*3,
+    5*3, 4*3, 7*3, 6*3,
+    4*3, 0*3, 6*3, 2*3,
+    4*3, 5*3, 0*3, 1*3,
+    2*3, 3*3, 6*3, 7*3
+  };
 
+  static const char texture_coords[] = {
+    0, 0,
+    1, 0,
+    0, 1,
+    1, 1
+  };
+
+  static const char indices[] = {
+    0, 1, 2,
+    2, 1, 3
+  };
+
+  const char *q = quad_vtx;
   for (int i = 0; i < 6; ++i) {
-    vb[i*4+0].tex = Vector2(0,0);
-    vb[i*4+1].tex = Vector2(1,0);
-    vb[i*4+2].tex = Vector2(0,1);
-    vb[i*4+3].tex = Vector2(1,1);
 
-    int ofs = i*4;
-    ib[i*2+0] = Triangle(ofs+0, ofs+1, ofs+2);
-    ib[i*2+1] = Triangle(ofs+2, ofs+1, ofs+3);
+    for (int j = 0; j < 6; ++j) {
+      ib[i*6+j] = i*4 + indices[j];
+    }
+
+    for (int j = 0; j < 4; ++j) {
+      *vb++ = vtx[*q+0];
+      *vb++ = vtx[*q+1];
+      *vb++ = vtx[*q+2];
+      q++;
+      *vb++ = texture_coords[j*2+0];
+      *vb++ = texture_coords[j*2+1];
+    }
   }
-
-  vb[0].pos = v0;
-  vb[1].pos = v1;
-  vb[2].pos = v2;
-  vb[3].pos = v3;
-  vb += 4;
-
-  vb[0].pos = v1;
-  vb[1].pos = v5;
-  vb[2].pos = v3;
-  vb[3].pos = v7;
-  vb += 4;
-
-  vb[0].pos = v5;
-  vb[1].pos = v4;
-  vb[2].pos = v7;
-  vb[3].pos = v6;
-  vb += 4;
-
-  vb[0].pos = v4;
-  vb[1].pos = v0;
-  vb[2].pos = v6;
-  vb[3].pos = v2;
-  vb += 4;
-
-  vb[0].pos = v4;
-  vb[1].pos = v5;
-  vb[2].pos = v0;
-  vb[3].pos = v1;
-  vb += 4;
-
-  vb[0].pos = v2;
-  vb[1].pos = v3;
-  vb[2].pos = v6;
-  vb[3].pos = v7;
-  vb += 4;
-
 
   gMesh->UnlockIndexBuffer();
   gMesh->UnlockVertexBuffer();
-
 }
 
 void __stdcall WinMainCRTStartup()
