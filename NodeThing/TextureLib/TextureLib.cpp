@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <math.h>
 
+
 #define ASSERT(x) do { if (!x) _asm {int 3} } while(false);
 
 Texture **gTextures;
@@ -73,8 +74,8 @@ float interpolate(float t) {
 
 float perlin_noise(float x, float y) {
   // grid coordinates
-  int gridX = ((int)x) & 255;
-  int gridY = ((int)y) & 255;
+  int gridX = ((int)x) & 0xff;
+  int gridY = ((int)y) & 0xff;
 
   // get corner gradients
   Vector2 &g00 = gGrad[gPerm[gridX+gPerm[gridY]] % cNumGradients];
@@ -108,18 +109,19 @@ void source_noise(int dstTexture, float scaleX, float scaleY) {
   int height = texture->height;
   int width = texture->width;
 
+
   for (int i = 0; i < height; ++i) {
     for (int j = 0; j  < width; ++j) {
       float x = scaleX * j / width;
       float y = scaleY * i / height;
 
       float n = perlin_noise(x, y);
-      n = perlin_noise(x+n, y);
-      n = perlin_noise(x+n, y+2*n);
-      p[0] = n;
-      p[1] = n;
-      p[2] = n;
-      p[3] = n;
+      float n2 = perlin_noise(x+n, y);
+      float n3 = perlin_noise(x+n2, y+2*n2);
+      p[0] = n3;
+      p[1] = n3;
+      p[2] = n3;
+      p[3] = n3;
 
       p += 4;
     }

@@ -11,6 +11,14 @@ struct Texture {
   int height;
 };
 
+extern Texture **gTextures;
+
+struct Vector3 {
+  Vector3() {}
+  Vector3(float x, float y, float z) : x(x), y(y), z(z) {}
+  float x, y, z;
+};
+
 struct Vector2 {
   Vector2() {}
   Vector2(float x, float y) : x(x), y(y) {}
@@ -24,9 +32,11 @@ extern float len(const Vector2 &v);
 extern Vector2 normalize(const Vector2 &v);
 extern float dot(const Vector2 &a, const Vector2 &b);
 
+extern int tRand();
+
 template <typename T>
 T randf(T a, T b) {
-  return a + (b-a) * rand() / RAND_MAX;
+  return a + (b-a) * tRand() / RAND_MAX;
 }
 
 template <typename T, typename U>
@@ -35,7 +45,6 @@ T lerp(T a, T b, U v) {
 }
 
 static const int cNumGradients = 16;
-
 
 void source_solid(int dstTexture, uint32 color);
 void source_noise(int dstTexture, float scaleX, float scaleY);

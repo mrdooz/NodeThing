@@ -11,6 +11,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ColorWheel", "ColorWheel\ColorWheel.csproj", "{14D66825-E906-45B1-865F-7CEB72BDC055}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TextureRunner", "TextureRunner\TextureRunner.vcxproj", "{061E60AB-CF66-4C49-9A01-2555C2D816B9}"
+	ProjectSection(ProjectDependencies) = postProject
+		{415C2747-23D7-4CE1-AA15-5B6A6B616A6A} = {415C2747-23D7-4CE1-AA15-5B6A6B616A6A}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -63,6 +66,7 @@ Global
 		{14D66825-E906-45B1-865F-7CEB72BDC055}.Release|x86.ActiveCfg = Release|Any CPU
 		{061E60AB-CF66-4C49-9A01-2555C2D816B9}.Debug|Any CPU.ActiveCfg = Debug|Win32
 		{061E60AB-CF66-4C49-9A01-2555C2D816B9}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{061E60AB-CF66-4C49-9A01-2555C2D816B9}.Debug|Mixed Platforms.Build.0 = Debug|Win32
 		{061E60AB-CF66-4C49-9A01-2555C2D816B9}.Debug|Win32.ActiveCfg = Debug|Win32
 		{061E60AB-CF66-4C49-9A01-2555C2D816B9}.Debug|Win32.Build.0 = Debug|Win32
 		{061E60AB-CF66-4C49-9A01-2555C2D816B9}.Debug|x86.ActiveCfg = Debug|Win32

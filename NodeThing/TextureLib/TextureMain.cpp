@@ -46,6 +46,15 @@ struct RenderData {
   vector<uint8> opCodes;
 };
 
+#define RAND_MAX_32 ((1U << 31) - 1)
+
+int tRand()
+{
+  static int seed = 0x12345;
+  return (seed = (seed * 214013 + 2531011) & RAND_MAX_32) >> 16;
+}
+
+
 // One queue per HWND
 map<HWND, deque<RenderData *> >gRenderQueue;
 
@@ -171,7 +180,7 @@ extern "C" {
 
     gPerm = new int[512];
     for (int i = 0; i < 512; ++i)
-      gPerm[i] = rand() % 256;
+      gPerm[i] = tRand() % 256;
 
     gGrad = new Vector2[cNumGradients];
     for (int i = 0; i < cNumGradients; ++i)
