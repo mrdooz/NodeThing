@@ -16,7 +16,14 @@ namespace NodeThing
         private static extern bool closeTextureLib();
 
         [DllImport("TextureLib.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
-        private static extern void renderTexture(IntPtr hwnd, int width, int height, int numTextures, int finalTexture, [MarshalAs(UnmanagedType.LPStr)]String name, int opCodeLen, byte[] opCodes);
+        private static extern void renderTexture(IntPtr hwnd, int width, int height, int numTextures, int finalTexture, 
+            [MarshalAs(UnmanagedType.LPStr)] String name, int opCodeLen, byte[] opCodes);
+
+
+        [DllImport("TextureLib.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+        private static extern void generateCode(int width, int height, int numTextures, int finalTexture, 
+            [MarshalAs(UnmanagedType.LPStr)]String name, int opCodeLen, byte[] opCodes, [MarshalAs(UnmanagedType.LPStr)] String filename);
+
 
         public TextureFactory(CompletedCallback callback) : base(callback)
         {
@@ -174,24 +181,43 @@ namespace NodeThing
             return true;
         }
 
-        public override void GenerateCode(GeneratorSequence seq, IntPtr displayHandle)
+        List<byte> SequenceToOpCodes(GeneratorSequence seq)
         {
             var opCodes = new List<byte>();
 
             foreach (var s in seq.Sequence) {
                 // push eax
                 opCodes.Add(0x50);
-                if (!CodeGen(s, ref opCodes))
-                    return;
+                if (!CodeGen(s, ref opCodes)) {
+                    opCodes.Clear();
+                    break;
+                }
                 // pop eax
                 opCodes.Add(0x58);
             }
-
-            if (opCodes.Count > 0) {
-                var opCodeArray = opCodes.ToArray();
-                var finalTexture = seq.Sequence.LastOrDefault().DstTextureIdx;
-                renderTexture(displayHandle, seq.Size.Width, seq.Size.Height, seq.NumTextures, finalTexture, seq.Name, opCodeArray.Count(), opCodeArray);
-            }
+            return opCodes;
         }
+
+        public override void DisplaySequence(GeneratorSequence seq, IntPtr displayHandle)
+        {
+            var opCodes = SequenceToOpCodes(seq);
+            if (opCodes.Count == 0)
+                return;
+
+            var finalTexture = seq.Sequence.Last().DstTextureIdx;
+            renderTexture(displayHandle, seq.Size.Width, seq.Size.Height, seq.NumTextures, finalTexture, seq.Name, opCodes.Count, opCodes.ToArray());
+        }
+
+        public override void GenerateCode(GeneratorSequence seq, string filename)
+        {
+            var opCodes = SequenceToOpCodes(seq);
+            if (opCodes.Count == 0)
+                return;
+
+            var finalTexture = seq.Sequence.Last().DstTextureIdx;
+            generateCode(seq.Size.Width, seq.Size.Height, seq.NumTextures, finalTexture, seq.Name, opCodes.Count, opCodes.ToArray(), filename);
+            
+        }
+
     }
 }

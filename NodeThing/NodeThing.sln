@@ -8,9 +8,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NodeThing", "NodeThing\Node
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TextureLib", "TextureLib\TextureLib.vcxproj", "{415C2747-23D7-4CE1-AA15-5B6A6B616A6A}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TextureRunner", "TextureRunner\TextureRunner.vcxproj", "{BCED3D3F-9B49-4DC4-8647-0D2EC0066B5B}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ColorWheel", "ColorWheel\ColorWheel.csproj", "{14D66825-E906-45B1-865F-7CEB72BDC055}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TextureRunner", "TextureRunner\TextureRunner.vcxproj", "{061E60AB-CF66-4C49-9A01-2555C2D816B9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -49,17 +49,6 @@ Global
 		{415C2747-23D7-4CE1-AA15-5B6A6B616A6A}.Release|Win32.ActiveCfg = Release|Win32
 		{415C2747-23D7-4CE1-AA15-5B6A6B616A6A}.Release|Win32.Build.0 = Release|Win32
 		{415C2747-23D7-4CE1-AA15-5B6A6B616A6A}.Release|x86.ActiveCfg = Release|Win32
-		{BCED3D3F-9B49-4DC4-8647-0D2EC0066B5B}.Debug|Any CPU.ActiveCfg = Debug|Win32
-		{BCED3D3F-9B49-4DC4-8647-0D2EC0066B5B}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
-		{BCED3D3F-9B49-4DC4-8647-0D2EC0066B5B}.Debug|Win32.ActiveCfg = Debug|Win32
-		{BCED3D3F-9B49-4DC4-8647-0D2EC0066B5B}.Debug|Win32.Build.0 = Debug|Win32
-		{BCED3D3F-9B49-4DC4-8647-0D2EC0066B5B}.Debug|x86.ActiveCfg = Debug|Win32
-		{BCED3D3F-9B49-4DC4-8647-0D2EC0066B5B}.Release|Any CPU.ActiveCfg = Release|Win32
-		{BCED3D3F-9B49-4DC4-8647-0D2EC0066B5B}.Release|Mixed Platforms.ActiveCfg = Release|Win32
-		{BCED3D3F-9B49-4DC4-8647-0D2EC0066B5B}.Release|Mixed Platforms.Build.0 = Release|Win32
-		{BCED3D3F-9B49-4DC4-8647-0D2EC0066B5B}.Release|Win32.ActiveCfg = Release|Win32
-		{BCED3D3F-9B49-4DC4-8647-0D2EC0066B5B}.Release|Win32.Build.0 = Release|Win32
-		{BCED3D3F-9B49-4DC4-8647-0D2EC0066B5B}.Release|x86.ActiveCfg = Release|Win32
 		{14D66825-E906-45B1-865F-7CEB72BDC055}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{14D66825-E906-45B1-865F-7CEB72BDC055}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{14D66825-E906-45B1-865F-7CEB72BDC055}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -72,6 +61,17 @@ Global
 		{14D66825-E906-45B1-865F-7CEB72BDC055}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{14D66825-E906-45B1-865F-7CEB72BDC055}.Release|Win32.ActiveCfg = Release|Any CPU
 		{14D66825-E906-45B1-865F-7CEB72BDC055}.Release|x86.ActiveCfg = Release|Any CPU
+		{061E60AB-CF66-4C49-9A01-2555C2D816B9}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{061E60AB-CF66-4C49-9A01-2555C2D816B9}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{061E60AB-CF66-4C49-9A01-2555C2D816B9}.Debug|Win32.ActiveCfg = Debug|Win32
+		{061E60AB-CF66-4C49-9A01-2555C2D816B9}.Debug|Win32.Build.0 = Debug|Win32
+		{061E60AB-CF66-4C49-9A01-2555C2D816B9}.Debug|x86.ActiveCfg = Debug|Win32
+		{061E60AB-CF66-4C49-9A01-2555C2D816B9}.Release|Any CPU.ActiveCfg = Release|Win32
+		{061E60AB-CF66-4C49-9A01-2555C2D816B9}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{061E60AB-CF66-4C49-9A01-2555C2D816B9}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{061E60AB-CF66-4C49-9A01-2555C2D816B9}.Release|Win32.ActiveCfg = Release|Win32
+		{061E60AB-CF66-4C49-9A01-2555C2D816B9}.Release|Win32.Build.0 = Release|Win32
+		{061E60AB-CF66-4C49-9A01-2555C2D816B9}.Release|x86.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

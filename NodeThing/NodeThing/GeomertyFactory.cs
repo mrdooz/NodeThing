@@ -6,6 +6,7 @@ using System.Text;
 
 namespace NodeThing
 {
+/*
     public class GeometryFactory : NodeFactory
     {
         public GeometryFactory(CompletedCallback callback) : base(callback)
@@ -41,9 +42,10 @@ namespace NodeThing
             return null;
         }
 
-        public override void GenerateCode(GeneratorSequence seq, IntPtr displayHandle)
+        public override void DisplaySequence(GeneratorSequence seq, IntPtr displayHandle)
         {
             throw new NotImplementedException();
         }
     }
+ */
 }

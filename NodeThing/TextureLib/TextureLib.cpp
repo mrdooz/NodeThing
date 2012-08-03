@@ -4,8 +4,9 @@
 #include "stdafx.h"
 #include "TextureLib.hpp"
 #include <stdint.h>
-#include <assert.h>
 #include <math.h>
+
+#define ASSERT(x) do { if (!x) _asm {int 3} } while(false);
 
 Texture **gTextures;
 
@@ -136,8 +137,8 @@ void modifier_add(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTe
   Texture *srcTexture2 = gTextures[srcTexture2Idx];
   float *src2 = srcTexture2->data;
 
-  assert(dstTexture->width == srcTexture1->width && dstTexture->width == srcTexture2->width);
-  assert(dstTexture->height == srcTexture1->height && dstTexture->height == srcTexture2->height);
+  ASSERT(dstTexture->width == srcTexture1->width && dstTexture->width == srcTexture2->width);
+  ASSERT(dstTexture->height == srcTexture1->height && dstTexture->height == srcTexture2->height);
 
   for (int i = 0; i < dstTexture->height; ++i) {
     for (int j = 0; j < dstTexture->width; ++j) {
@@ -162,8 +163,8 @@ void modifier_sub(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTe
   Texture *srcTexture2 = gTextures[srcTexture2Idx];
   float *src2 = srcTexture2->data;
 
-  assert(dstTexture->width == srcTexture1->width && dstTexture->width == srcTexture2->width);
-  assert(dstTexture->height == srcTexture1->height && dstTexture->height == srcTexture2->height);
+  ASSERT(dstTexture->width == srcTexture1->width && dstTexture->width == srcTexture2->width);
+  ASSERT(dstTexture->height == srcTexture1->height && dstTexture->height == srcTexture2->height);
 
   for (int i = 0; i < dstTexture->height; ++i) {
     for (int j = 0; j < dstTexture->width; ++j) {
@@ -189,8 +190,8 @@ void modifier_max(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTe
   Texture *srcTexture2 = gTextures[srcTexture2Idx];
   float *src2 = srcTexture2->data;
 
-  assert(dstTexture->width == srcTexture1->width && dstTexture->width == srcTexture2->width);
-  assert(dstTexture->height == srcTexture1->height && dstTexture->height == srcTexture2->height);
+  ASSERT(dstTexture->width == srcTexture1->width && dstTexture->width == srcTexture2->width);
+  ASSERT(dstTexture->height == srcTexture1->height && dstTexture->height == srcTexture2->height);
 
   for (int i = 0; i < dstTexture->height; ++i) {
     for (int j = 0; j < dstTexture->width; ++j) {
@@ -215,8 +216,8 @@ void modifier_min(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTe
   Texture *srcTexture2 = gTextures[srcTexture2Idx];
   float *src2 = srcTexture2->data;
 
-  assert(dstTexture->width == srcTexture1->width && dstTexture->width == srcTexture2->width);
-  assert(dstTexture->height == srcTexture1->height && dstTexture->height == srcTexture2->height);
+  ASSERT(dstTexture->width == srcTexture1->width && dstTexture->width == srcTexture2->width);
+  ASSERT(dstTexture->height == srcTexture1->height && dstTexture->height == srcTexture2->height);
 
   for (int i = 0; i < dstTexture->height; ++i) {
     for (int j = 0; j < dstTexture->width; ++j) {
@@ -243,8 +244,8 @@ void modifier_mul(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTe
   Texture *srcTexture2 = gTextures[srcTexture2Idx];
   float *src2 = srcTexture2->data;
 
-  assert(dstTexture->width == srcTexture1->width && dstTexture->width == srcTexture2->width);
-  assert(dstTexture->height == srcTexture1->height && dstTexture->height == srcTexture2->height);
+  ASSERT(dstTexture->width == srcTexture1->width && dstTexture->width == srcTexture2->width);
+  ASSERT(dstTexture->height == srcTexture1->height && dstTexture->height == srcTexture2->height);
 
   for (int i = 0; i < dstTexture->height; ++i) {
     for (int j = 0; j < dstTexture->width; ++j) {

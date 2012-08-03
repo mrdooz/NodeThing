@@ -31,6 +31,7 @@ namespace NodeThing
         private Node _redrawTimeNode;
 
         private string _currentFilename;
+        private HashSet<string> _acceptedSavefiles = new HashSet<string>();
 
         public class ClientTransform
         {
@@ -133,11 +134,6 @@ namespace NodeThing
  */
         }
 
-        public void PropertyChanged(object sender, EventArgs args)
-        {
-            GenerateCode();
-        }
-
         private void mainPanel_Paint(object sender, PaintEventArgs e)
         {
             var g = e.Graphics;
@@ -229,7 +225,6 @@ namespace NodeThing
         protected void NodeSelected(Node node)
         {
             flowLayoutPanel1.Controls.Clear();
-            Debug.WriteLine("selected node: {0}", node.Name);
 
             var propertyChanged = new EventHandler(delegate {
 
@@ -253,22 +248,13 @@ namespace NodeThing
                     {
                         _redrawTimer.Stop();
 
-                        var seqs = Settings.Graph.GenerateCodeFromSelected2(node, new Size(512, 512));
+                        var seqs = Settings.Graph.GenerateSequenceFromSelected(node, new Size(512, 512));
                         _displayForm.BeginAddPanels();
                         foreach (var s in seqs) {
                             var handle = s.IsPreview ? _displayForm.GetPreviewHandle() : _displayForm.GetSinkHandle(s.Name);
-                            _factory.GenerateCode(s, handle);
+                            _factory.DisplaySequence(s, handle);
                         }
                         _displayForm.EndAddPanels();
-/*
-                        var seq = Settings.Graph.GenerateCodeFromSelected(node);
-                        Debug.WriteLine("property node: {0}", node.Name);
-                        if (seq.Sequence.Count > 0) {
-                            seq.Name = "Preview";
-                            seq.Size = new Size(512, 512);
-                            _factory.GenerateCode(seq, _displayForm.PreviewHandle());
-                        }
- */
                     };
                     _redrawTimer.Start();
                 }
@@ -307,30 +293,34 @@ namespace NodeThing
 
         private void generateToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            GenerateCode();
+            if (_currentFilename == null) {
+                saveAsToolStripMenuItem_Click(sender, e);
+            }
+
+            if (_currentFilename != null) {
+                var filename = _currentFilename + ".h";
+
+                // ask to overwrite the first time we save to an existing file
+                bool saveFile = true;
+                if (File.Exists(filename) && !_acceptedSavefiles.Contains(filename)) {
+                    saveFile = MessageBox.Show("Overwrite " + filename, "Overwrite file?", MessageBoxButtons.YesNoCancel) == DialogResult.Yes;
+                }
+
+                if (saveFile) {
+                    _acceptedSavefiles.Add(filename);
+                    File.Delete(filename);
+                    var seqs = Settings.Graph.GenerateAllSequences();
+                    foreach (var s in seqs) {
+                        _factory.GenerateCode(s, filename);
+                    }
+
+                    MessageBox.Show("Code generated to " + filename);
+                    
+                }
+
+            }
         }
 
-        private void GenerateCode()
-        {
-/*
-            var code = Settings.Graph.GenerateCode();
-            var displayedReal = false;
-            var displayedPreview = false;
-            foreach (var c in code) {
-                if (c.IsPreview) {
-                    if (!displayedPreview) {
-                        displayedPreview = true;
-                        _factory.GenerateCode(c, _displayForm.PreviewHandle());
-                    }
-                } else {
-                    if (!displayedReal) {
-                        displayedReal = true;
-                        _factory.GenerateCode(c, _displayForm.DisplayHandle());
-                    }
-                }
-            }
- */
-        }
 
         private void mainPanel_Scroll(object sender, ScrollEventArgs e)
         {

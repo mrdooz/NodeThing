@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
@@ -292,19 +293,6 @@ namespace NodeThing
             return null;
         }
 
-        public GeneratorSequence GenerateCodeFromSelected(Node selected)
-        {
-            GraphNode root;
-            if (selected.IsSink()) {
-                // If selecting a sink, use its child instead as sinks are really just sentinels..
-                root = selected.Inputs.Count == 1 ? FindNode(selected).Children[0] : null;
-            } else {
-                root = FindNode(selected);
-            }
-
-            return root != null ? TopologicalSorter.SequenceFromNode(root) : new GeneratorSequence();
-        }
-
         private IEnumerable<GraphNode> FindSinks(GraphNode node)
         {
             var res = new List<GraphNode>();
@@ -330,7 +318,23 @@ namespace NodeThing
             return res;
         }
 
-        public IEnumerable<GeneratorSequence> GenerateCodeFromSelected2(Node selected, Size previewSize)
+        private GeneratorSequence ProcessSink(GraphNode sink)
+        {
+            Debug.Assert(sink.Node.IsSink());
+
+            if (sink.Children.Length == 1 && sink.Children[0] != null) {
+
+                var seq = TopologicalSorter.SequenceFromNode(sink.Children[0]);
+                var sinkNode = sink.Node;
+                seq.IsPreview = false;
+                seq.Name = ((NodeProperty<string>)sinkNode.Properties["Name"]).Value;
+                seq.Size = ((NodeProperty<Size>)sinkNode.Properties["Size"]).Value;
+                return seq;
+            }
+            return new GeneratorSequence();
+        }
+
+        public IEnumerable<GeneratorSequence> GenerateSequenceFromSelected(Node selected, Size previewSize)
         {
             var res = new List<GeneratorSequence>();
 
@@ -347,13 +351,9 @@ namespace NodeThing
             var sinks = FindSinks(selectedNode);
             foreach (var sink in sinks) {
                 if (sink.Children.Length == 1 && sink.Children[0] != null) {
-
-                    var seq = TopologicalSorter.SequenceFromNode(sink.Children[0]);
-                    var sinkNode = sink.Node;
-                    seq.IsPreview = false;
-                    seq.Name = ((NodeProperty<string>)sinkNode.Properties["Name"]).Value;
-                    seq.Size = ((NodeProperty<Size>)sinkNode.Properties["Size"]).Value;
-                    res.Add(seq);
+                    var seq = ProcessSink(sink);
+                    if (seq.Sequence.Count > 0)
+                        res.Add(seq);
                 }
             }
 
@@ -361,35 +361,27 @@ namespace NodeThing
         }
 
 
-        public List<GeneratorSequence> GenerateCode()
+        public List<GeneratorSequence> GenerateAllSequences()
         {
-            // Generates sequences for all the roots in the current graph
+            // Generates sequences for all the sinks
             var res = new List<GeneratorSequence>();
 
+            HashSet<GraphNode> processedNodes = new HashSet<GraphNode>();
+
             foreach (var r in _roots) {
-
-                if (r.Node.IsSink()) {
-                    var root = r.Children[0];
-                    if (root != null) {
-                        var selectedChild = FindSelectedNode(root);
-
-                        var seq = TopologicalSorter.SequenceFromNode(root);
-                        seq.IsPreview = false;
-                        res.Add(seq);
-                        if (selectedChild != null) {
-                            var previewSeq = TopologicalSorter.SequenceFromNode(selectedChild);
-                            previewSeq.IsPreview = true;
-                            res.Add(previewSeq);
+                var sinks = FindSinks(r);
+                foreach (var sink in sinks) {
+                    if (!processedNodes.Contains(sink)) {
+                        processedNodes.Add(sink);
+                        if (sink.Children.Length == 1 && sink.Children[0] != null) {
+                            var seq = ProcessSink(sink);
+                            if (seq.Sequence.Count > 0)
+                                res.Add(seq);
                         }
                     }
-                } else {
-                    // Node isn't a proper sink, so we generate a preview
-                    var seq = TopologicalSorter.SequenceFromNode(r);
-                    seq.IsPreview = true;
-                    res.Add(seq);
                 }
-
             }
+
             return res;
         }
     }

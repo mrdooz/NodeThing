@@ -98,22 +98,9 @@ DWORD WINAPI renderThread(void *param) {
       gTextures[i] = texture;
     }
 
-    // Massage the generated opcode a little
-    uint8 *mem = (uint8 *)HeapAlloc(gHeapHandle, HEAP_ZERO_MEMORY, data->opCodes.size()+9);
-    // push eax
-    mem[0] = 0x50;
-    // lea eax, funcPtrs
-    mem[1] = 0x8d;
-    mem[2] = 0x05;
-    *(uint32 *)&mem[3] = (uint32)&funcPtrs[0];
-
-    memcpy(mem + 7, data->opCodes.data(), data->opCodes.size());
-
-    // pop eax
-    mem[7 + data->opCodes.size() + 0] = 0x58;
-
-    // ret
-    mem[7 + data->opCodes.size() + 1] = 0xc3;
+    // Copy the opcodes to executable memory, and call that badboy!
+    uint8 *mem = (uint8 *)HeapAlloc(gHeapHandle, HEAP_ZERO_MEMORY, data->opCodes.size());
+    memcpy(mem, data->opCodes.data(), data->opCodes.size());
 
     _asm {
       call [mem];
@@ -220,7 +207,58 @@ extern "C" {
     DeleteCriticalSection(&gRenderCs);
   }
 
-  __declspec(dllexport) void renderTexture(HWND hwnd, int width, int height, int numTextures, int finalTexture, const char *name, int opCodeLen, const char *opCodes) {
+  void patchOpCodes(int opCodeLen, const uint8 *opCodes, vector<uint8> *out)   {
+
+    out->resize(opCodeLen + 9);
+    uint8 *mem = out->data();
+
+    // push eax
+    mem[0] = 0x50;
+    // lea eax, funcPtrs
+    mem[1] = 0x8d;
+    mem[2] = 0x05;
+    *(uint32 *)&mem[3] = (uint32)&funcPtrs[0];
+
+    memcpy(mem + 7, opCodes, opCodeLen);
+
+    // pop eax
+    mem[7 + opCodeLen + 0] = 0x58;
+
+    // ret
+    mem[7 + opCodeLen + 1] = 0xc3;
+  }
+
+  void printInt32(FILE *f, int v, const char *prefix, const char *suffix)
+  {
+    fprintf(f, "%s0x%.2x, 0x%.2x, 0x%.2x, 0x%.2x%s", prefix ? prefix : "", v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, (v >> 24) & 0xff, suffix ? suffix : "");
+  }
+
+  __declspec(dllexport) void generateCode(int width, int height, int numTextures, int finalTexture, const char *name, int opCodeLen, const uint8 *opCodes, const char *filename) {
+
+    vector<uint8> mem;
+    patchOpCodes(opCodeLen, opCodes, &mem);
+
+    FILE *f = fopen(filename, "at");
+    fseek(f, 0, SEEK_END);
+    fprintf(f, "unsigned char %s[%d] = {\n", name ? name : "dummy", 4*4+mem.size());
+    printInt32(f, width, "\t", ", ");
+    printInt32(f, height, "", ", // width, height\n");
+
+    printInt32(f, numTextures, "\t", ", ");
+    printInt32(f, finalTexture, "", ", // num textures, final texture\n\t");
+
+    for (size_t i = 0; i < mem.size(); ++i) {
+      fprintf(f, "0x%.2x%s%s", mem[i], 
+        i != mem.size()-1 ? "," : "", 
+        (i & 0xf) == 0xf ? "\n\t" : "");
+    }
+
+    fprintf(f, "\n};\n\n");
+
+    fclose(f);
+  }
+
+  __declspec(dllexport) void renderTexture(HWND hwnd, int width, int height, int numTextures, int finalTexture, const char *name, int opCodeLen, const uint8 *opCodes) {
 
     auto rd = new RenderData;
     rd->hwnd = hwnd;
@@ -229,8 +267,7 @@ extern "C" {
     rd->numTextures = numTextures;
     rd->finalTexture = finalTexture;
     rd->name = name ? name : "";
-    rd->opCodes.resize(opCodeLen);
-    memcpy(rd->opCodes.data(), opCodes, opCodeLen);
+    patchOpCodes(opCodeLen, opCodes, &rd->opCodes);
 
     EnterCriticalSection(&gRenderCs);
     gRenderQueue[hwnd].push_back(rd);
@@ -238,5 +275,4 @@ extern "C" {
 
     SetEvent(gNewDataEvent);
   }
-
 };
