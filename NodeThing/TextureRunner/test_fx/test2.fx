@@ -1,37 +1,16 @@
-matrix World;
-matrix ViewProj;
+float4 PostProcessPS( float2 Tex : TEXCOORD0 ) : COLOR0
+{
+      Sum += saturate( 1 - dot( Orig.xyz, tex2D( g_samSrcNormal, Tex + TexelKernel[i] ).xyz ) );
+    //float4 Orig = tex2D( g_samSrcNormal, Tex );
+    //float4 Sum = 0;
+    //for( int i = 0; i < 4; i++ )
+        //Sum += saturate( 1 - dot( Orig.xyz, tex2D( g_samSrcNormal, Tex + TexelKernel[i] ).xyz ) );
+/*
 
-struct VsInput {
-  vector pos : POSITION;
-  float2 tex : TEXCOORD;
-};
 
-struct VsOutput {
-  vector pos : POSITION;
-  float2 tex : TEXCOORD;
-};
+    for( int i = 0; i < 4; i++ )
+        Sum += saturate( 1 - dot( Orig.xyz, tex2D( g_samSrcNormal, Tex + TexelKernel[i] ).xyz ) );
 
-VsOutput vsMain(VsInput input) {
-  VsOutput output;
-  matrix mtx = mul(World, ViewProj);
-  output.pos = mul(input.pos, mtx);
-  output.tex = input.tex;
-  return output;
-}
-
-Texture tex;
-
-sampler s0 = sampler_state {
-  Texture = (tex);
-};
-
-float4 psMain(VsOutput input) : COLOR0 {
-  return tex2D(s0, input.tex);
-}
-
-technique t0 {
-  pass p0 {
-    vertexshader = compile vs_3_0 vsMain();
-    pixelshader = compile ps_3_0 psMain();
-  }
+    return Sum;
+*/    
 }

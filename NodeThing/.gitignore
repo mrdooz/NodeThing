@@ -30,3 +30,4 @@ ipch/
 *.ps
 *.pso
 *.filters
+TextureRunner/test_fx
