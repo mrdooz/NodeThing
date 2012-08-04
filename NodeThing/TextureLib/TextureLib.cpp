@@ -5,6 +5,7 @@
 #include "TextureLib.hpp"
 #include <stdint.h>
 #include <math.h>
+#include <xmmintrin.h>
 
 Texture **gTextures;
 
@@ -125,6 +126,57 @@ void source_noise(int dstTexture, float scaleX, float scaleY) {
   }
 }
 
+enum BlendFunc {
+  kBlendAdd,
+  kBlendSub,
+  kBlendMul,
+  kBlendMin,
+  kBlendMax
+};
+
+#if 1
+void blend_inner(float *dst, float *src1, float blend1, float *src2, float blend2, int len, BlendFunc fn) {
+
+  __m128 blend_a = _mm_set_ps1(blend1);
+  __m128 blend_b = _mm_set_ps1(blend2);
+
+  for (int i = 0; i < len; ++i) {
+    __m128 tmp_a = _mm_mul_ps(_mm_load_ps(src1), blend_a);
+    __m128 tmp_b = _mm_mul_ps(_mm_load_ps(src2), blend_b);
+    switch (fn) {
+      case kBlendAdd: tmp_a = _mm_add_ps(tmp_a, tmp_b); break;
+      case kBlendSub: tmp_a = _mm_sub_ps(tmp_a, tmp_b); break;
+      case kBlendMul: tmp_a = _mm_mul_ps(tmp_a, tmp_b); break;
+      case kBlendMin: tmp_a = _mm_min_ps(tmp_a, tmp_b); break;
+      case kBlendMax: tmp_a = _mm_max_ps(tmp_a, tmp_b); break;
+      default: __assume(false);
+    }
+    _mm_store_ps(dst, tmp_a);
+    dst += 4;
+    src1 += 4;
+    src2 += 4;
+  }
+}
+#else
+void blend_inner(float *dst, float *src1, float blend1, float *src2, float blend2, int len, BlendFunc fn) {
+
+  for (int i = 0; i < len*4; ++i) {
+
+    switch (fn) {
+    case kBlendAdd: *dst = blend1 * *src1 + blend2 * *src2; break;
+    case kBlendSub: *dst = blend1 * *src1 - blend2 * *src2; break;
+    case kBlendMul: *dst = blend1 * *src1 * blend2 * *src2; break;
+    case kBlendMin: *dst = min(blend1 * *src1, blend2 * *src2); break;
+    case kBlendMax: *dst = max(blend1 * *src1, blend2 * *src2); break;
+    default: __assume(false);
+    }
+    ++dst;
+    ++src1;
+    ++src2;
+  }
+}
+#endif
+
 void modifier_add(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2) {
 
   Texture *dstTexture = gTextures[dstTextureIdx];
@@ -139,6 +191,33 @@ void modifier_add(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTe
   ASSERT(dstTexture->width == srcTexture1->width && dstTexture->width == srcTexture2->width);
   ASSERT(dstTexture->height == srcTexture1->height && dstTexture->height == srcTexture2->height);
 
+  int len = dstTexture->width * dstTexture->height;
+  blend_inner(dst, src1, blend1, src2, blend2, len, kBlendAdd);
+#if 0
+  __m128 blend_a = _mm_set_ps1(blend1);
+  __m128 blend_b = _mm_set_ps1(blend2);
+
+  int size = dstTexture->width * dstTexture->height;
+  for (int i = 0; i < size; ++i) {
+/*
+      __m128 src_a = _mm_load_ps(src1);
+      __m128 src_b = _mm_load_ps(src2);
+      src_a = _mm_mul_ps(src_a, blend_a);
+      src_b = _mm_mul_ps(src_b, blend_b);
+      src_a = _mm_add_ps(_mm_mul_ps(src_a, blend_a), _mm_mul_ps(src_b, blend_b));
+*/
+      _mm_store_ps(dst, _mm_add_ps(_mm_mul_ps(_mm_load_ps(src1), blend_a), _mm_mul_ps(_mm_load_ps(src2), blend_b)));
+/*
+      dst[0] = blend1 * src1[0] + blend2 * src2[0];
+      dst[1] = blend1 * src1[1] + blend2 * src2[1];
+      dst[2] = blend1 * src1[2] + blend2 * src2[2];
+      dst[3] = blend1 * src1[3] + blend2 * src2[3];
+*/
+      dst += 4;
+      src1 += 4;
+      src2 += 4;
+  }
+/*
   for (int i = 0; i < dstTexture->height; ++i) {
     for (int j = 0; j < dstTexture->width; ++j) {
       dst[0] = blend1 * src1[0] + blend2 * src2[0];
@@ -150,6 +229,8 @@ void modifier_add(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTe
       src2 += 4;
     }
   }
+*/
+#endif
 }
 
 void modifier_sub(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2) {
@@ -165,6 +246,9 @@ void modifier_sub(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTe
   ASSERT(dstTexture->width == srcTexture1->width && dstTexture->width == srcTexture2->width);
   ASSERT(dstTexture->height == srcTexture1->height && dstTexture->height == srcTexture2->height);
 
+  int len = dstTexture->width * dstTexture->height;
+  blend_inner(dst, src1, blend1, src2, blend2, len, kBlendSub);
+/*
   for (int i = 0; i < dstTexture->height; ++i) {
     for (int j = 0; j < dstTexture->width; ++j) {
       dst[0] = blend1 * src1[0] - blend2 * src2[0];
@@ -176,7 +260,7 @@ void modifier_sub(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTe
       src2 += 4;
     }
   }
-
+*/
 }
 
 void modifier_max(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2) {
@@ -192,6 +276,9 @@ void modifier_max(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTe
   ASSERT(dstTexture->width == srcTexture1->width && dstTexture->width == srcTexture2->width);
   ASSERT(dstTexture->height == srcTexture1->height && dstTexture->height == srcTexture2->height);
 
+  int len = dstTexture->width * dstTexture->height;
+  blend_inner(dst, src1, blend1, src2, blend2, len, kBlendMax);
+/*
   for (int i = 0; i < dstTexture->height; ++i) {
     for (int j = 0; j < dstTexture->width; ++j) {
       dst[0] = max(blend1 * src1[0], blend2 * src2[0]);
@@ -203,6 +290,7 @@ void modifier_max(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTe
       src2 += 4;
     }
   }
+*/
 }
 
 void modifier_min(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2) {
@@ -218,6 +306,9 @@ void modifier_min(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTe
   ASSERT(dstTexture->width == srcTexture1->width && dstTexture->width == srcTexture2->width);
   ASSERT(dstTexture->height == srcTexture1->height && dstTexture->height == srcTexture2->height);
 
+  int len = dstTexture->width * dstTexture->height;
+  blend_inner(dst, src1, blend1, src2, blend2, len, kBlendMin);
+/*
   for (int i = 0; i < dstTexture->height; ++i) {
     for (int j = 0; j < dstTexture->width; ++j) {
       dst[0] = min(blend1 * src1[0], blend2 * src2[0]);
@@ -229,7 +320,7 @@ void modifier_min(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTe
       src2 += 4;
     }
   }
-
+*/
 }
 
 void modifier_mul(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2) {
@@ -246,6 +337,9 @@ void modifier_mul(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTe
   ASSERT(dstTexture->width == srcTexture1->width && dstTexture->width == srcTexture2->width);
   ASSERT(dstTexture->height == srcTexture1->height && dstTexture->height == srcTexture2->height);
 
+  int len = dstTexture->width * dstTexture->height;
+  blend_inner(dst, src1, blend1, src2, blend2, len, kBlendMul);
+/*
   for (int i = 0; i < dstTexture->height; ++i) {
     for (int j = 0; j < dstTexture->width; ++j) {
       dst[0] = blend1 * src1[0] * blend2 * src2[0];
@@ -257,5 +351,6 @@ void modifier_mul(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTe
       src2 += 4;
     }
   }
+*/
 }
 

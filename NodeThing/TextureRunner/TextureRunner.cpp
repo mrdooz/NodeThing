@@ -6,6 +6,7 @@
 #include <MMSystem.h>
 #include "../TextureLib/TextureLib.hpp"
 #include "shader_code.h"
+#include <xmmintrin.h>
 
 #ifdef _DEBUG
 #define NO_SIZE_OPT
@@ -13,7 +14,7 @@
 
 #ifdef NO_SIZE_OPT
 #define CHECK_HR(x) ASSERT(SUCCEEDED(x))
-#else
+#else   
 #define CHECK_HR(x) x
 #endif
 
@@ -164,7 +165,10 @@ void createTexture(const void *raw, int len, IDirect3DTexture9 **texture) {
   gTextures = tNew<Texture *>(header->numTextures);
   for (int i = 0; i < header->numTextures; ++i) {
     Texture *texture = tNew<Texture>();
-    texture->data = tNew<float>(4*header->width*header->height);
+    // Use VirtualAlloc to guarantee 16 byte alignment (actually page alignment)
+    
+    int size = 4*header->width*header->height*sizeof(float);
+    texture->data = (float *)VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     texture->width = header->width;
     texture->height = header->height;
     gTextures[i] = texture;
@@ -188,7 +192,7 @@ void createTexture(const void *raw, int len, IDirect3DTexture9 **texture) {
   VirtualFree(mem, 0, MEM_RELEASE);
 
   for (int i = 0; i < header->numTextures; ++i) {
-    tFree(gTextures[i]->data);
+    VirtualFree(gTextures[i]->data, 0, MEM_RELEASE);
     tFree(gTextures[i]);
   }
 
