@@ -25,6 +25,10 @@ sampler s0 = sampler_state {
   Texture = (tex);
 };
 
+float tjong() {
+  return 1;
+}
+
 float4 psMain(VsOutput input) : COLOR0 {
   return tex2D(s0, input.tex);
 }

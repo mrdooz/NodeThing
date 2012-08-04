@@ -1,7 +1,7 @@
 # bnf from http://hl2glsl.codeplex.com/wikipage?title=HLSL%20BNF
 # with a couple of tweaks/fixes
 
-from pyparsing import alphas, alphanums, Word, Literal, Optional, Combine, OneOrMore, ZeroOrMore, Forward, Literal, Keyword, delimitedList, Group, Suppress, oneOf
+from pyparsing import alphas, alphanums, Word, Literal, Optional, Combine, OneOrMore, ZeroOrMore, Forward, Literal, Keyword, delimitedList, Group, Suppress, oneOf, nestedExpr
 
 import sys
 
@@ -121,7 +121,7 @@ assignment_operator = \
 
 initializers = expression
 
-index = L('[') + (integer ^ id) + L(']')
+index = nestedExpr('[', ']', integer ^ id)
 
 variable_decl_atom = \
 	O(storage_class) + O(type_modifier) + type + id + O(index) + \
@@ -135,20 +135,20 @@ atom << (\
 	variable_decl_atom)
 
 factor << (\
-	atom ^ \
-	L('(') + atom + L(')') + atom ^ \
-	L('(') + expression + L(')') ^ \
-	L('{') + O(expression + Z(L(',') + expression)) + L('}') ^ \
-	L('<') + id + L('>'))
+	atom | \
+	nestedExpr('(', ')', type) + atom | \
+	nestedExpr('(', ')', expression) | \
+	nestedExpr('{', '}', delimitedList(expression)) | \
+	nestedExpr('<', '>', id))
 
-return_statement = K('return') + expression + L(';')
+return_statement = K('return') + expression + S(L(';'))
 
-variable_assignment = id_composed + O(index) + assignment_operator + initializers + L(';')
+variable_assignment = id_composed + O(index) + assignment_operator + initializers + S(L(';'))
 
-flow_control_words = (K('stop') ^ K('continue') ^ K('break') ^ K('discard')) + L(';')
+flow_control_words = (K('stop') ^ K('continue') ^ K('break') ^ K('discard')) + S(L(';'))
 
 loop_attributes = \
-	K('unroll') + K('(') + integer + K(')') ^ \
+	K('unroll') + nestedExpr('(', ')', integer) | \
 	K('loop')
 
 while_attributes = loop_attributes
@@ -159,17 +159,17 @@ statement_scope = \
 	L('{') + function_body + L('}') ^ \
 	function_body
 	
-comparison_operators = L('<') ^ L('>') ^ L('==') ^ L('!=') ^ L('<=') ^ L('>=')
+comparison_operators = L('<=') | '>=' | '<' | '>' | '==' | '!='
 
 condition = expression + comparison_operators + expression
 	
-while_statement = O(while_attributes) + K('while') + L('(') + condition + L(')') + statement_scope
+while_statement = O(while_attributes) + K('while') + nestedExpr('(', ')', condition) + statement_scope
 
-do_statement = K('do') + statement_scope + K('while') + L('(') + condition + L(')') + L(';')
+do_statement = K('do') + statement_scope + K('while') + nestedExpr('(', ')', condition) + S(L(';'))
 	
-if_attributes = K('flatten') ^ K('branch')
+if_attributes = K('flatten') | K('branch')
 if_statement = \
-	O(if_attributes) + K('if') + L('(') + condition + L(')') + \
+	O(if_attributes) + K('if') + nestedExpr('(', ')', condition) + \
 		statement_scope + \
 	O(K('else') + \
 		statement_scope)
@@ -181,13 +181,13 @@ for_statement = \
 		O((expression) ^ id_composed + O(index) + assignment_operator + initializers) + ')' + \
 			statement_scope
 		
-switch_attributes = K('call') ^ K('forcecase') ^ K('branch') ^ K('flatten')
+switch_attributes = K('call') | K('forcecase') | K('branch') | K('flatten')
 switch_statement = \
-	switch_attributes + K('switch') + L('(') + expression + L(')') + L('{') + \
-		X((K('case') + integer ^ K('default')) + L(':') + O(statement_scope)) + \
-	L('}')
+	switch_attributes + K('switch') + nestedExpr('(', ')', expression) + L('{') + \
+		X((K('case') + integer ^ K('default')) + ':' + O(statement_scope)) + \
+	'}'
 
-variable_decl = variable_decl_atom + L(';')
+variable_decl = variable_decl_atom + ';'
 
 statement = \
 	return_statement ^ \
@@ -203,35 +203,35 @@ statement = \
 function_body << Z(statement)
 
 sampler_type = \
-	K("sampler") ^ K("sampler1D") ^ K("sampler2D") ^ K("sampler3D") ^ K("samplerCUBE")
+	K("sampler1D") | K("sampler2D") | K("sampler3D") | K("samplerCUBE") | K("sampler")
 
-sampler_decl = sampler_type + id + L('=') + type + L('{') + \
+sampler_decl = sampler_type + id + '=' + type + '{' + \
 	Z(variable_assignment) + \
-	L('}') + ';'
+	'}' + ';'
 	
 function_decl = \
 	O(storage_class) + O(type_modifier) + \
-	type + id + S(L('(')) + G(O(params)) + S(L(')')) + O(S(L(':')) + semantical_parameters) + \
-		S(L('{') + \
+	type + id + nestedExpr('(', ')', params) + O(S(':') + semantical_parameters) + \
+		S('{' + \
 			function_body + \
-		L('}'))
+		'}')
 		
 technique_decl = \
-	S(K('technique')) + id + S(L('{')) + \
+	S(K('technique')) + id + S('{') + \
 		Z( \
-			G(S(K('pass')) + id + S(L('{')) + \
+			G(S(K('pass')) + id + S('{') + \
 				Z(\
-					id + S(L('=')) + O(K('compile') + id) + (id + L('()') ^ expression) + L(';') \
+					id + S('=') + O(K('compile') + id) + (id + '()' ^ expression) + S(';') \
 				)) +\
-			S(L('}')) \
+			S('}') \
 		) +\
-	S(L('}'))
+	S('}')
 
-struct_var = G(type + id + S(L(':')) + semantical_parameters) + S(';')
+struct_var = G(type + id + S(':') + semantical_parameters) + S(';')
 struct_decl = \
-	S(K('struct')) + id + S(L('{')) + \
+	S(K('struct')) + id + S('{') + \
 		X(struct_var) + \
-	S(L('}') + ';')
+	S('}' + ';')
 	
 
 effect_file = X(
