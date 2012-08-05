@@ -95,7 +95,7 @@
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <OptimizeReferences>false</OptimizeReferences>
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
-      <AdditionalOptions>/CRINKLER /HASHTRIES:300 /COMPMODE:SLOW /ORDERTRIES:1000 /REPORT:TextureRunner.html %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/CRINKLER /REPORT:TextureRunner.html %(AdditionalOptions)</AdditionalOptions>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <EntryPointSymbol>
       </EntryPointSymbol>

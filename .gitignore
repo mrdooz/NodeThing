@@ -31,3 +31,4 @@ ipch/
 *.pso
 *.filters
 TextureRunner/test_fx
+TextureRunner/TextureRunner.html

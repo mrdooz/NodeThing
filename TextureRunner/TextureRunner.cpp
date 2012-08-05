@@ -6,10 +6,11 @@
 #include <MMSystem.h>
 #include "../TextureLib/TextureLib.hpp"
 #include "shader_code.h"
+//#include "test1_c.h"
 #include <xmmintrin.h>
 
 #ifdef _DEBUG
-#define NO_SIZE_OPT
+//#define NO_SIZE_OPT
 #endif
 
 #ifdef NO_SIZE_OPT
@@ -62,10 +63,12 @@ extern "C" {
 };
 
 void memcpy(void *dst, const void *src, int len) {
-  char *d = (char *)dst;
-  const char *s = (const char *)src;
-  for (int i = 0; i < len; ++i)
-    *d++ = *s++;
+  _asm {
+    mov edi, dst;
+    mov esi, src;
+    mov ecx, len;
+    rep movsb;
+  }
 }
 
 #define RAND_MAX_32 ((1U << 31) - 1)
@@ -148,12 +151,15 @@ void WINAPI fillTexture(D3DXVECTOR4* pOut, CONST D3DXVECTOR2* pTexCoord, CONST D
   int x = (int)((pTexCoord->x - pTexelSize->x/2) * w);
   int y = (int)((pTexCoord->y - pTexelSize->y/2) * h);
 
-  float *dst = (float *)pOut;
   float *src = &t->data[4*(y*w+x)];
+  _mm_storeu_ps((float *)pOut, _mm_min_ps(_mm_set_ps1(1), _mm_max_ps(_mm_set_ps1(0), _mm_load_ps(src))));
+/*
+  float *dst = (float *)pOut;
   for (int i = 0; i < 4; ++i) {
     *dst++ = max(0, min(1, *src));
     src++;
   }
+*/
 }
 
 void createTexture(const void *raw, int len, IDirect3DTexture9 **texture) {
@@ -165,8 +171,8 @@ void createTexture(const void *raw, int len, IDirect3DTexture9 **texture) {
   gTextures = tNew<Texture *>(header->numTextures);
   for (int i = 0; i < header->numTextures; ++i) {
     Texture *texture = tNew<Texture>();
+
     // Use VirtualAlloc to guarantee 16 byte alignment (actually page alignment)
-    
     int size = 4*header->width*header->height*sizeof(float);
     texture->data = (float *)VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     texture->width = header->width;
@@ -309,13 +315,20 @@ void __stdcall WinMainCRTStartup()
   ID3DXBuffer *errors;
 
 #ifdef NO_SIZE_OPT
-  if (FAILED(D3DXCreateEffectFromFile(gDevice, "test1.fx", nullptr, nullptr, 0, nullptr, &effect, &errors))) {
+  if (FAILED(D3DXCreateEffectFromFile(gDevice, "test1_c.fx", nullptr, nullptr, 0, nullptr, &effect, &errors))) {
     const char *err = (const char *)errors->GetBufferPointer();
     OutputDebugString(err);
     ExitProcess(1);
   }
 #else
+  //D3DXCreateEffect(gDevice, test1, sizeof(test1), nullptr, nullptr, 0, nullptr, &effect, &errors);
   D3DXCreateEffect(gDevice, test1_fx, sizeof(test1_fx), nullptr, nullptr, 0, nullptr, &effect, &errors);
+#if _DEBUG
+  if (errors) {
+    const char *err = (const char *)errors->GetBufferPointer();
+    OutputDebugString(err);
+  }
+#endif
   //const char *err = (const char *)errors->GetBufferPointer();
 
 #endif
@@ -332,6 +345,9 @@ void __stdcall WinMainCRTStartup()
   D3DXHANDLE hViewProj = effect->GetParameterByName(0, "ViewProj");
   D3DXHANDLE hTexture = effect->GetParameterByName(0, "tex");
 #else
+  //D3DXHANDLE hWorld = effect->GetParameterByName(0, VAR_World);
+  //D3DXHANDLE hViewProj = effect->GetParameterByName(0, VAR_ViewProj);
+  //D3DXHANDLE hTexture = effect->GetParameterByName(0, VAR_tex);
   D3DXHANDLE hWorld = effect->GetParameterByName(0, VAR_WORLD);
   D3DXHANDLE hViewProj = effect->GetParameterByName(0, VAR_VIEWPROJ);
   D3DXHANDLE hTexture = effect->GetParameterByName(0, VAR_TEX);
