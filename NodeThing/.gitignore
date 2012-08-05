@@ -1,7 +1,7 @@
 Debug/
 Release/
 Distribution/
-_win32/_ReSharper.kumi/*
+_ReSharper.*/*
 data/
 ipch/
 *.ilk
@@ -30,7 +30,3 @@ ipch/
 *.ps
 *.pso
 *.filters
-_win32/My Inspector XE Results - kumi/*
-_win32/My Amplifier XE Results - kumi/*
-kumi_browser/.idea/
-effects/*.h

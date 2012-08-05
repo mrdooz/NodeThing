@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Drawing;
 
 namespace NodeThing
@@ -10,165 +8,177 @@ namespace NodeThing
     {
         public Node()
         {
-            inputs = new List<Connection>();
+            Inputs = new List<Connection>();
         }
 
-        int calcWidth(Graphics g)
+        private int CalcWidth(Graphics g)
         {
-            var defaultWidth = 100;
+            const int defaultWidth = 100;
             var maxInput = 0;
-            foreach (var input in inputs)
-            {
-                var bounds = g.MeasureString(input.name, _font);
+            foreach (var input in Inputs) {
+                var bounds = g.MeasureString(input.Name, _font);
                 maxInput = Math.Max(maxInput, (int)(bounds.Width + 0.5));
             }
 
-            if (output != null)
-            {
-                var bounds = g.MeasureString(output.name, _font);
-                maxInput += _padding + (int)bounds.Width + 4 * _connectionRadius;
-            }
-            else
-            {
-                maxInput += 2 * _connectionRadius;
+            if (Output != null) {
+                var bounds = g.MeasureString(Output.Name, _font);
+                maxInput += Padding + (int)bounds.Width + 4 * ConnectionRadius;
+            } else {
+                maxInput += 2 * ConnectionRadius;
             }
 
             return Math.Max(defaultWidth, maxInput);
         }
 
-        public Connection pointInsideConnection(Point pt)
+        public void AddInput(string name, Connection.Type type)
         {
-            var x = pos.X;
-            var y = pos.Y;
+            Inputs.Add(new Connection { Name = name, DataType = type, Direction = Connection.Io.Input, Node = this, Slot = Inputs.Count });
+        }
 
-            for (var i = 0; i < inputs.Count; ++i)
-            {
-                var topY = _headerHeight + _padding + i * _connectionHeight;
-                var bottomY = topY + _connectionHeight;
+        public void SetOutput(string name, Connection.Type type)
+        {
+            Output = new Connection { Name = name, DataType = type, Direction = Connection.Io.Output, Node = this, Slot = 0 };
+        }
+
+        public Connection PointInsideConnection(Point pt)
+        {
+            var x = Pos.X;
+            var y = Pos.Y;
+
+            for (var i = 0; i < Inputs.Count; ++i) {
+                var topY = HeaderHeight + Padding + i * ConnectionHeight;
+                var bottomY = topY + ConnectionHeight;
                 var middleY = (topY + bottomY) / 2;
 
                 var dx = pt.X - x;
                 var dy = pt.Y - (y + middleY);
-                if (Math.Sqrt(dx * dx + dy * dy) < _connectionRadius)
-                    return inputs[i];
+                if (Math.Sqrt(dx * dx + dy * dy) < ConnectionRadius)
+                    return Inputs[i];
             }
 
-            if (output != null)
-            {
+            if (Output != null) {
                 var dx = pt.X - (x + _width);
-                var dy = pt.Y - (y + _headerHeight + _height / 2);
-                if (Math.Sqrt(dx * dx + dy * dy) < _connectionRadius)
-                    return output;
+                var dy = pt.Y - (y + HeaderHeight + _height / 2);
+                if (Math.Sqrt(dx * dx + dy * dy) < ConnectionRadius)
+                    return Output;
             }
 
             return null;
         }
 
-        public bool pointInsideBody(Point pt)
+        public Tuple<bool, Point> ConnectionPos(Connection.Io io, int slot)
         {
-            var x = pos.X;
-            var y = pos.Y;
+            var invalidPos = new Tuple<bool, Point>(false, new Point(0, 0));
 
-            var dx = pt.X - (x + _connectionRadius);
-            var dy = pt.Y - (y + _connectionRadius);
-            var leftDist = Math.Sqrt(dx * dx + dy * dy);
-
-            dx = pt.X - (x + _width - _connectionRadius);
-            var rightDist = Math.Sqrt(dx*dx + dy*dy);
-
-            var middle = new Rectangle(x + _connectionRadius, y, _width - 2 * _connectionRadius, _headerHeight);
-            var body = new Rectangle(pos.X, pos.Y + _headerHeight, _width, _height);
-
-            return body.Contains(pt) || middle.Contains(pt) || leftDist < _connectionRadius || rightDist < _connectionRadius;
+            if (io == Connection.Io.Output) {
+                if (Output == null)
+                    return invalidPos;
+                return new Tuple<bool, Point>(true, new Point(Pos.X, Pos.Y + HeaderHeight + _height/2));
+            } else {
+                if (slot >= Inputs.Count)
+                    return invalidPos;
+                return new Tuple<bool, Point>(true, new Point(Pos.X, Pos.Y + HeaderHeight + Padding + ConnectionHeight/2 + slot * ConnectionHeight));
+            }
         }
 
-        public void render(Graphics g)
+        public bool PointInsideBody(Point pt)
+        {
+            var x = Pos.X;
+            var y = Pos.Y;
+
+            var dx = pt.X - (x + ConnectionRadius);
+            var dy = pt.Y - (y + ConnectionRadius);
+            var leftDist = Math.Sqrt(dx * dx + dy * dy);
+
+            dx = pt.X - (x + _width - ConnectionRadius);
+            var rightDist = Math.Sqrt(dx * dx + dy * dy);
+
+            var middle = new Rectangle(x + ConnectionRadius, y, _width - 2 * ConnectionRadius, HeaderHeight);
+            var body = new Rectangle(Pos.X, Pos.Y + HeaderHeight, _width, _height);
+
+            return body.Contains(pt) || middle.Contains(pt) || leftDist < ConnectionRadius || rightDist < ConnectionRadius;
+        }
+
+        public void Render(Graphics g)
         {
             g.ResetTransform();
-            g.TranslateTransform(pos.X, pos.Y);
+            g.TranslateTransform(Pos.X, Pos.Y);
 
-            if (_needsUpdate)
-            {
+            if (_needsUpdate) {
                 _needsUpdate = false;
-                var numSlots = Math.Max(inputs.Count, output != null ? 1 : 0);
-                _height = 2 * _padding + _connectionHeight * numSlots;
-                _width = calcWidth(g);
+                var numSlots = Math.Max(Inputs.Count, Output != null ? 1 : 0);
+                _height = 2 * Padding + ConnectionHeight * numSlots;
+                _width = CalcWidth(g);
             }
 
             // Draw header
             var brush = new SolidBrush(Color.LightGray);
-            g.FillEllipse(brush, 0, 0, _headerHeight * 2, _headerHeight * 2);
-            g.FillEllipse(brush, _width - 2 * _headerHeight, 0, _headerHeight * 2, _headerHeight * 2);
-            g.FillRectangle(brush, _headerHeight, 0, _width - 2 * _headerHeight, _headerHeight);
+            g.FillEllipse(brush, 0, 0, HeaderHeight * 2, HeaderHeight * 2);
+            g.FillEllipse(brush, _width - 2 * HeaderHeight, 0, HeaderHeight * 2, HeaderHeight * 2);
+            g.FillRectangle(brush, HeaderHeight, 0, _width - 2 * HeaderHeight, HeaderHeight);
 
             // Draw main body
             brush = new SolidBrush(Color.GhostWhite);
-            g.FillRectangle(brush, 0, _headerHeight, _width, _height);
+            g.FillRectangle(brush, 0, HeaderHeight, _width, _height);
 
             // Draw outline
             var pen = new Pen(Color.DarkGray, 1);
-            g.DrawArc(pen, 0, 0, 2 * _headerHeight, 2 * _headerHeight, -180, 90);
-            g.DrawArc(pen, _width - 2 * _headerHeight, 0, 2 * _headerHeight, 2 * _headerHeight, -0, -91);
-            g.DrawLine(pen, _headerHeight, 0, _width - _headerHeight, 0);
-            g.DrawLine(pen, 0, _headerHeight, 0, _headerHeight + _height);
-            g.DrawLine(pen, _width, _headerHeight, _width, _headerHeight + _height);
-            g.DrawLine(pen, 0, _headerHeight + _height, _width, _headerHeight + _height);
-            g.DrawLine(pen, 0, _headerHeight, _width, _headerHeight);
+            g.DrawArc(pen, 0, 0, 2 * HeaderHeight, 2 * HeaderHeight, -180, 90);
+            g.DrawArc(pen, _width - 2 * HeaderHeight, 0, 2 * HeaderHeight, 2 * HeaderHeight, -0, -91);
+            g.DrawLine(pen, HeaderHeight, 0, _width - HeaderHeight, 0);
+            g.DrawLine(pen, 0, HeaderHeight, 0, HeaderHeight + _height);
+            g.DrawLine(pen, _width, HeaderHeight, _width, HeaderHeight + _height);
+            g.DrawLine(pen, 0, HeaderHeight + _height, _width, HeaderHeight + _height);
+            g.DrawLine(pen, 0, HeaderHeight, _width, HeaderHeight);
 
-            var headerFormat = new StringFormat();
-            headerFormat.LineAlignment = StringAlignment.Center;
-            headerFormat.Alignment = StringAlignment.Center;
-
-            var inputFormat = new StringFormat();
-            inputFormat.LineAlignment = StringAlignment.Center;
+            var headerFormat = new StringFormat { LineAlignment = StringAlignment.Center, Alignment = StringAlignment.Center };
+            var inputFormat = new StringFormat { LineAlignment = StringAlignment.Center };
 
             // Draw connections
             var connectionBrush = new SolidBrush(Color.Yellow);
-            for (var i = 0; i < inputs.Count; ++i)
-            {
-                var topY = _headerHeight + _padding + i * _connectionHeight;
-                var bottomY = topY + _connectionHeight;
+            for (var i = 0; i < Inputs.Count; ++i) {
+                var topY = HeaderHeight + Padding + i * ConnectionHeight;
+                var bottomY = topY + ConnectionHeight;
                 var middleY = (topY + bottomY) / 2;
-                g.FillEllipse(connectionBrush, -_connectionRadius, middleY - _connectionRadius, _connectionDiameter, _connectionDiameter);
-                g.DrawEllipse(pen, -_connectionRadius, middleY - _connectionRadius, _connectionDiameter, _connectionDiameter);
-                var r = 2 * _connectionRadius;
-                g.DrawString(inputs[i].name, _font, _blackBrush, new RectangleF(r, topY, _width-r, _connectionHeight), inputFormat);
+                g.FillEllipse(connectionBrush, -ConnectionRadius, middleY - ConnectionRadius, ConnectionDiameter,
+                              ConnectionDiameter);
+                g.DrawEllipse(pen, -ConnectionRadius, middleY - ConnectionRadius, ConnectionDiameter, ConnectionDiameter);
+                const int r = 2 * ConnectionRadius;
+                g.DrawString(Inputs[i].Name, _font, _blackBrush, new RectangleF(r, topY, _width - r, ConnectionHeight),
+                             inputFormat);
             }
 
-            if (output != null)
-            {
-                var format = new StringFormat();
-                format.LineAlignment = StringAlignment.Center;
-                format.Alignment = StringAlignment.Far;
+            if (Output != null) {
+                var format = new StringFormat { LineAlignment = StringAlignment.Center, Alignment = StringAlignment.Far };
 
-                var y = _headerHeight + _height / 2 - _connectionRadius;
-                g.FillEllipse(connectionBrush, _width - _connectionRadius, y, _connectionDiameter, _connectionDiameter);
-                g.DrawEllipse(pen, _width - _connectionRadius, y, _connectionDiameter, _connectionDiameter);
-                var r = 2 * _connectionRadius;
-                g.DrawString(output.name, _font, _blackBrush, 
-                    new RectangleF(0, _headerHeight + _height / 2 - _connectionHeight / 2, _width-r, _connectionHeight), format);
+                var y = HeaderHeight + _height / 2 - ConnectionRadius;
+                g.FillEllipse(connectionBrush, _width - ConnectionRadius, y, ConnectionDiameter, ConnectionDiameter);
+                g.DrawEllipse(pen, _width - ConnectionRadius, y, ConnectionDiameter, ConnectionDiameter);
+                const int r = 2 * ConnectionRadius;
+                g.DrawString(Output.Name, _font, _blackBrush,
+                             new RectangleF(0, HeaderHeight + _height / 2 - ConnectionHeight / 2, _width - r, ConnectionHeight),
+                             format);
             }
 
-            g.DrawString(name, _font, _blackBrush, new RectangleF(0, 0, _width, _headerHeight), headerFormat);
+            g.DrawString(Name, _font, _blackBrush, new RectangleF(0, 0, _width, HeaderHeight), headerFormat);
         }
 
-        public string name { get; set; }
-        public Point pos { get; set; }
+        public string Name { get; set; }
+        public Point Pos { get; set; }
 
-        public List<Connection> inputs { get; set; }
-        public Connection output { get; set; }
+        public List<Connection> Inputs { get; set; }
+        public Connection Output { get; set; }
 
-        Brush _blackBrush = new SolidBrush(Color.Black);
-        Font _font = new Font("Arial", 7);
+        private readonly Brush _blackBrush = new SolidBrush(Color.Black);
+        private readonly Font _font = new Font("Arial", 7);
 
-        const int _padding = 10;
-        const int _connectionHeight = 25;
-        const int _connectionRadius = 5;
-        const int _connectionDiameter = 2 * _connectionRadius;
-        const int _headerHeight = 20;
-        int _width;
-        int _height;
-        bool _needsUpdate = true;
-
+        private const int Padding = 10;
+        private const int ConnectionHeight = 25;
+        private const int ConnectionRadius = 5;
+        private const int ConnectionDiameter = 2 * ConnectionRadius;
+        private const int HeaderHeight = 20;
+        private int _width;
+        private int _height;
+        private bool _needsUpdate = true;
     }
 }

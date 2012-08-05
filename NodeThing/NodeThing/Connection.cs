@@ -7,21 +7,30 @@ namespace NodeThing
 {
     public class Connection
     {
+        public Connection()
+        {
+            Used = false;
+        }
+
         public enum Type
         {
-            kInt,
-            kFloat,
-            kGeometry,
+            Int,
+            Float,
+            Geometry,
         }
 
         public enum Io
         {
-            kInput,
-            kOutput,
+            Input,
+            Output,
         }
 
-        public string name { get; set; }
-        public Type type { get; set; }
-        public Io io { get; set; }
+        public string Name { get; set; }
+        public Type DataType { get; set; }
+        public Io Direction { get; set; }
+        public Node Node { get; set; }
+        public int Slot { get; set; }
+        public bool Used { get; set; }
+
     }
 }
