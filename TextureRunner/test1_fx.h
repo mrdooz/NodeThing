@@ -1,0 +1,18 @@
+#pragma once
+#define VAR_TEX "a"
+#define VAR_WORLD "b"
+#define VAR_VSOUTPUT "c"
+#define VAR_VSINPUT "d"
+#define VAR_VIEWPROJ "e"
+#define VAR_OUTPUT "f"
+#define VAR_MTX "g"
+char test1_fx[] = "matrix b;"
+"matrix e;"
+"struct d{vector pos:POSITION;float2 a:TEXCOORD;};"
+"struct c{vector pos:POSITION;float2 a:TEXCOORD;};"
+"c vsMain(d input){c f;matrix g=mul(b,e);f.pos=mul(input.pos,g);f.a=input.a;return f;}"
+"Texture a;"
+"sampler s0=sampler_state{Texture=(a);};"
+"float4 psMain(c input):COLOR0{return tex2D(s0,input.a);}"
+"technique t0{pass p0{vertexshader=compile vs_3_0 vsMain();pixelshader=compile ps_3_0 psMain();}}"
+;

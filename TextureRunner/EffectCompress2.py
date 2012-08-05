@@ -18,7 +18,7 @@ def enterFunc(str, loc, tok):
 
 def leaveFunc(str, loc, tok):
 	global scope_level
-	scope_level += 1
+	scope_level -= 1
 
 def idAction(str, loc, tok):
 	# check if the id should be replaced
@@ -27,39 +27,29 @@ def idAction(str, loc, tok):
 		if name in cur_scope[scope_level]:
 #			print ">> id :", name, " -> ", cur_scope[scope_level][name]
 			return cur_scope[scope_level][name]
+		elif name in cur_scope[0]:
+			return cur_scope[0][name]
 		else:
 			pass
 #			print "** id :", name
-		
+
+def add_id(str, loc, tok):
+	if not replace_pass:
+		name = tok[1]
+#		print "** added: ", name, " level: ", scope_level
+		cur_scope[scope_level][name] = name
+
 
 def declVariable(str, loc, tok):
-	if not replace_pass:
-		name = tok[1]
-		cur_scope[scope_level][name] = name
+	add_id(str, loc, tok)
 	
 def declStruct(str, loc, tok):
-	if not replace_pass:
-		name = tok[1]
-		cur_scope[scope_level][name] = name
+	add_id(str, loc, tok)
 
 def declFunc(str, loc, tok):
-	if not replace_pass:
-		name = tok[1]
-		cur_scope[scope_level][name] = name
+	add_id(str, loc, tok)
 
-def generate_replacement_names():
-	curid = "a"
-	for i in range(scope_level):
-		for (k,v) in cur_scope[i].items():
-			cur_scope[i][k] = curid
-			o = ord(curid[-1])
-			if o < ord('z'):
-				curid = curid[:len(curid)-1] + chr(o+1)
-			else:
-				curid = "a" * (len(curid) + 1)
 
-	#print cur_scope
-	
 C = Combine
 O = Optional
 W = Word
@@ -323,29 +313,48 @@ def dbgPrint(id, tok):
 		print(len(fx_file))
 		print ">> " + id + ": ", tok
 
+class FxFile():
+	def __init__(self):
+		self.functions = []
+		self.variables = []
+		self.structs = []
+		self.techniques = []
+		self.samplers = []
+
+	def to_string():
+		# group
+		return ""
+
+fxfile = FxFile()
+
 def funcAction(str, loc, tok):
 	dbgPrint('func', tok)
 	if replace_pass:
+		fxfile.functions.append(list(tok))
 		fx_file.append(list(tok))
 
 def varAction(str, loc, tok):
 	dbgPrint('var', tok)
 	if replace_pass:
+		fxfile.variables.append(list(tok))
 		fx_file.append(list(tok))
 
 def structAction(str, loc, tok):
 	dbgPrint('struct', tok)
 	if replace_pass:
+		fxfile.structs.append(list(tok))
 		fx_file.append(list(tok))
 
 def techniqueAction(str, loc, tok):
 	dbgPrint('tech', tok)
 	if replace_pass:
+		fxfile.techniques.append(list(tok))
 		fx_file.append(list(tok))
 
 def samplerAction(str, loc, tok):
 	dbgPrint('sampler', tok)
 	if replace_pass:
+		fxfile.samplers.append(list(tok))
 		fx_file.append(list(tok))
 
 effect_file = Z(
@@ -358,60 +367,61 @@ effect_file = Z(
 if len(sys.argv) < 2:
 	exit(1)
 
-e = open(sys.argv[1]).readlines()
-ee = ""
-in_comment = False
-for x in e:
-
-	# handle multiline comments
-	if in_comment:
-		cmt = x.find("*/")
-		if cmt != -1:
-			x = x[cmt+2:]
-			in_comment = False
-	else:
-		cmt = x.find("/*")
-		if cmt != -1:
-			x = x[:cmt]
-			in_comment = True
+def massage_input(filename):
+	lines = open(filename).readlines()
+	res = ""
+	in_comment = False
+	for cur in lines:
+		# handle multiline comments
+		if in_comment:
+			cmt = cur.find("*/")
+			if cmt != -1:
+				cur = cur[cmt+2:]
+				in_comment = False
+		else:
+			cmt = cur.find("/*")
+			if cmt != -1:
+				cur = cur[:cmt]
+				in_comment = True
+				
+		if not in_comment:
+			# handle single line comments
+			cmt = cur.find("//")
+			if cmt != -1:
+				cur = cur[:cmt]
 			
-	if not in_comment:
-		# handle single line comments
-		cmt = x.find("//")
-		if cmt != -1:
-			x = x[:cmt]
-		
-		# skip lines that only consist of whitespace
-		if len(x.strip()) > 0:
-		
-			# insert whitespace to help the tokenizer
-			for t in [',', '(', '{', '[']:
-				x = x.replace(t, t + ' ')
+			# skip lines that only consist of whitespace
+			if len(cur.strip()) > 0:
+			
+				# insert whitespace to help the tokenizer
+				for t in [',', '(', '{', '[']:
+					cur = cur.replace(t, t + ' ')
 
-			for t in [')', '}', ']']:
-				x = x.replace(t, ' ' + t)
-		
-			ee += x
+				for t in [')', '}', ']']:
+					cur = cur.replace(t, ' ' + t)
+			
+				res += cur
+	return res
+				
+def generate_replacement_names():
+	curid = "a"
+	for (k1,v1) in cur_scope.items():
+		for (k2,v2) in v1.items():
+			cur_scope[k1][k2] = curid
+			o = ord(curid[-1])
+			if o < ord('z'):
+				curid = curid[:len(curid)-1] + chr(o+1)
+			else:
+				curid = "a" * (len(curid) + 1)
 
-# first pass to collect variable names, etc
-#print ee
-effect_file.parseString(ee)
-
-generate_replacement_names()
-
-id.setParseAction(idAction)
-
-# second pass to replace names
-replace_pass = True
-scope_level = 0
-effect_file.parseString(ee)
-
-print '#pragma once'
-for (k1,v1) in cur_scope.items():
-	for (k2,v2) in v1.items():
-		print '#define VAR_%s "%s"' % (k2, v2)
-
+	#print cur_scope
+	
 def print_output():
+	print '#pragma once'
+	for (k1,v1) in cur_scope.items():
+		for (k2,v2) in v1.items():
+			print '#define VAR_%s "%s"' % (k2.upper(), v2)
+
 	# remove whitespace where possible and print the output
 	res = 'char test1[] = '
 	for stmt in fx_file:
@@ -428,5 +438,18 @@ def print_output():
 		res += '"\n'
 	res += ';'
 	print res
+
+# first pass to collect variable names, etc
+input = massage_input(sys.argv[1])
+effect_file.parseString(input)
+
+generate_replacement_names()
+
+id.setParseAction(idAction)
+
+# second pass to replace names
+replace_pass = True
+scope_level = 0
+effect_file.parseString(input)
 
 print_output()

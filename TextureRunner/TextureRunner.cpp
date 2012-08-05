@@ -5,8 +5,8 @@
 #include <d3dx9effect.h>
 #include <MMSystem.h>
 #include "../TextureLib/TextureLib.hpp"
-#include "shader_code.h"
-//#include "test1_c.h"
+//#include "shader_code.h"
+#include "test1_fx.h"
 #include <xmmintrin.h>
 
 #ifdef _DEBUG
