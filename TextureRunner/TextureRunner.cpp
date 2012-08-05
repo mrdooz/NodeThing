@@ -303,13 +303,8 @@ void __stdcall WinMainCRTStartup()
 
 
   gD3D = Direct3DCreate9( D3D_SDK_VERSION );
-  if (!gD3D)
-    ExitProcess(1);
-
-  gHwnd = CreateWindow( "static",0,WS_POPUP|WS_VISIBLE,0,0,xRes, yRes,0,0,0,0);
-
-  if (FAILED(gD3D->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, gHwnd, D3DCREATE_HARDWARE_VERTEXPROCESSING, &gPresentParmas, &gDevice)))
-    ExitProcess(1);
+  gHwnd = CreateWindow("X",0,WS_POPUP|WS_VISIBLE,0,0,xRes, yRes,0,0,0,0);
+  gD3D->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, gHwnd, D3DCREATE_HARDWARE_VERTEXPROCESSING, &gPresentParmas, &gDevice);
 
   ID3DXEffect *effect;
   ID3DXBuffer *errors;
@@ -336,7 +331,6 @@ void __stdcall WinMainCRTStartup()
   createMesh();
 
   setTruncate();
-  int state = getFPUState();
   IDirect3DTexture9 *tex;
   createTexture(wat, sizeof(wat), &tex);
 
@@ -345,9 +339,6 @@ void __stdcall WinMainCRTStartup()
   D3DXHANDLE hViewProj = effect->GetParameterByName(0, "ViewProj");
   D3DXHANDLE hTexture = effect->GetParameterByName(0, "tex");
 #else
-  //D3DXHANDLE hWorld = effect->GetParameterByName(0, VAR_World);
-  //D3DXHANDLE hViewProj = effect->GetParameterByName(0, VAR_ViewProj);
-  //D3DXHANDLE hTexture = effect->GetParameterByName(0, VAR_tex);
   D3DXHANDLE hWorld = effect->GetParameterByName(0, VAR_WORLD);
   D3DXHANDLE hViewProj = effect->GetParameterByName(0, VAR_VIEWPROJ);
   D3DXHANDLE hTexture = effect->GetParameterByName(0, VAR_TEX);
@@ -360,8 +351,6 @@ void __stdcall WinMainCRTStartup()
   D3DXMatrixPerspectiveFovLH(&proj, 45 * D3DX_PI / 180, 4/3.0f, 1, 1000);
   D3DXMatrixMultiply(&viewProj, &view,&proj);
   
-  VirtualProtect(0, 0, 0, 0);
-
   DWORD start = timeGetTime();
 
   do {
@@ -389,8 +378,7 @@ void __stdcall WinMainCRTStartup()
 
   } while (!GetAsyncKeyState(VK_ESCAPE));
 
-  if (gDevice)
-    gDevice->Release();
+  gDevice->Release();
   gD3D->Release();
   DestroyWindow(gHwnd);
 

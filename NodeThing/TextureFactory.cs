@@ -38,6 +38,8 @@ namespace NodeThing
             AddNodeName("Min", 5);
 
             AddNodeName("Mul", 6);
+
+            AddNodeName("Circles", 7);
         }
 
         public override Node CreateNode(string name, Point pos)
@@ -72,58 +74,77 @@ namespace NodeThing
                 return node;
             }
 
+            if (name == "Circles")
+            {
+                node.SetOutput("Output", Connection.Type.Texture);
+                node.AddProperty("Amount", 5);
+                node.AddProperty("Size", 50.0f);
+                node.AddProperty("Variance", 3.0f);
+                node.AddProperty("Inner color", Color.FromArgb(255, 190, 190, 190));
+                node.AddProperty("Outer color", Color.FromArgb(255, 90, 90, 90));
+                return node;
+            }
+
             return null;
         }
 
-        private void AddPushInt32(Int32 value, ref List<byte> opCodes)
+        class ParamPusher
         {
-            opCodes.Add(0x68);
-            AddInt32(value, ref opCodes);
-        }
+            public void AddPushInt32(Int32 value)
+            {
+                OpCodes.Add(0x68);
+                AddInt32(value);
+                _stackFixupSize += 4;
+            }
 
-        private void AddPushFloat32(Single value, ref List<byte> opCodes)
-        {
-            opCodes.Add(0x68);
-            var bytes = BitConverter.GetBytes(value);
-            foreach (var b in bytes)
-                opCodes.Add(b);
-        }
+            public void AddPushFloat32(Single value)
+            {
+                OpCodes.Add(0x68);
+                var bytes = BitConverter.GetBytes(value);
+                foreach (var b in bytes)
+                    OpCodes.Add(b);
+                _stackFixupSize += 4;
+            }
 
-        private void AddPushInt16(Int16 value, ref List<byte> opCodes)
-        {
-            opCodes.Add(0x66);
-            opCodes.Add(0x68);
-            AddInt16(value, ref opCodes);
-        }
+            public void AddPushInt16(Int16 value)
+            {
+                OpCodes.Add(0x66);
+                OpCodes.Add(0x68);
+                AddInt16(value);
+                _stackFixupSize += 2;
+            }
 
+            public void AddInt32(Int32 value)
+            {
+                OpCodes.Add((byte)((value >> 0) & 0xff));
+                OpCodes.Add((byte)((value >> 8) & 0xff));
+                OpCodes.Add((byte)((value >> 16) & 0xff));
+                OpCodes.Add((byte)((value >> 24) & 0xff));
+            }
 
-        private void AddInt32(Int32 value, ref List<byte> opCodes)
-        {
-            opCodes.Add((byte)((value >>  0) & 0xff));
-            opCodes.Add((byte)((value >>  8) & 0xff));
-            opCodes.Add((byte)((value >> 16) & 0xff));
-            opCodes.Add((byte)((value >> 24) & 0xff));
-        }
+            public void AddInt16(Int16 value)
+            {
+                OpCodes.Add((byte)((value >> 0) & 0xff));
+                OpCodes.Add((byte)((value >> 8) & 0xff));
+            }
 
-        private void AddInt16(Int16 value, ref List<byte> opCodes)
-        {
-            opCodes.Add((byte)((value >> 0) & 0xff));
-            opCodes.Add((byte)((value >> 8) & 0xff));
-        }
+            public void AddPopStack()
+            {
+                OpCodes.Add(0x81);
+                OpCodes.Add(0xc4);
+                AddInt32(_stackFixupSize);
+            }
 
-        private void AddPopStack(Int32 amount, ref List<byte> opCodes)
-        {
-            opCodes.Add(0x81);
-            opCodes.Add(0xc4);
-            AddInt32(amount, ref opCodes);
-        }
+            public void AddFunctionCall(Int32 functionId)
+            {
+                // generate "call [eax + functionId*4]"
+                OpCodes.Add(0xff);
+                OpCodes.Add(0x90);
+                AddInt32(functionId * 4);
+            }
 
-        private void AddFunctionCall(Int32 functionId, ref List<byte> opCodes)
-        {
-            // generate "call [eax + functionId*4]"
-            opCodes.Add(0xff);
-            opCodes.Add(0x90);
-            AddInt32(functionId * 4, ref opCodes);
+            public List<byte> OpCodes { get; set; }
+            int _stackFixupSize = 0;
         }
 
         private bool CodeGen(SequenceStep step, ref List<byte> opCodes)
@@ -136,27 +157,33 @@ namespace NodeThing
             }
 
             if (name == "Solid") {
-                AddPushInt32(node.GetProperty<Color>("Color").ToArgb(), ref opCodes);
-                AddPushInt32(dstTexture, ref opCodes);
+                var pp = new ParamPusher { OpCodes = opCodes };
+                pp.AddPushInt32(node.GetProperty<Color>("Color").ToArgb());
+                pp.AddPushInt32(dstTexture);
 
-                AddFunctionCall(GetNodeId(node.Name), ref opCodes);
+                pp.AddFunctionCall(GetNodeId(node.Name));
 
                 // pop stack
-                AddPopStack(2*4, ref opCodes);
+                pp.AddPopStack();
+                opCodes = pp.OpCodes;
             }
 
             if (name == "Noise") {
-                // (dst, scaleX, scaleY)
+                // (dst, scaleX, scaleY, offsetX, offsetY)
+                var pp = new ParamPusher { OpCodes = opCodes };
                 var scale = node.GetProperty<Tuple<float, float>>("Scale");
-                AddPushFloat32(scale.Item2, ref opCodes);
-                AddPushFloat32(scale.Item1, ref opCodes);
-                AddPushInt32(dstTexture, ref opCodes);
+                var offset = node.GetProperty<Tuple<float, float>>("Offset");
+                pp.AddPushFloat32(scale.Item2);
+                pp.AddPushFloat32(scale.Item2);
+                pp.AddPushFloat32(offset.Item2);
+                pp.AddPushFloat32(offset.Item1);
+                pp.AddPushInt32(dstTexture);
 
-                AddFunctionCall(GetNodeId(node.Name), ref opCodes);
+                pp.AddFunctionCall(GetNodeId(node.Name));
 
                 // pop stack
-                AddPopStack(3 * 4, ref opCodes);
-
+                pp.AddPopStack();
+                opCodes = pp.OpCodes;
             }
 
             if (name == "Add" || name == "Sub" || name == "Mul" || name == "Max" || name == "Min") {
@@ -166,16 +193,35 @@ namespace NodeThing
                 var srcTexture1 = step.InputTextures[0];
                 var srcTexture2 = step.InputTextures[1];
                 // (dst, src1, scale 1, src2, scale 2)
+                var pp = new ParamPusher { OpCodes = opCodes };
                 var blend = node.GetProperty<Tuple<float, float>>("Blend");
-                AddPushFloat32(blend.Item2, ref opCodes);
-                AddPushInt32(srcTexture2, ref opCodes);
-                AddPushFloat32(blend.Item1, ref opCodes);
-                AddPushInt32(srcTexture1, ref opCodes);
-                AddPushInt32(dstTexture, ref opCodes);
+                pp.AddPushFloat32(blend.Item2);
+                pp.AddPushInt32(srcTexture2);
+                pp.AddPushFloat32(blend.Item1);
+                pp.AddPushInt32(srcTexture1);
+                pp.AddPushInt32(dstTexture);
 
-                AddFunctionCall(GetNodeId(node.Name), ref opCodes);
+                pp.AddFunctionCall(GetNodeId(node.Name));
 
-                AddPopStack(5*4, ref opCodes);
+                pp.AddPopStack();
+                opCodes = pp.OpCodes;
+            }
+
+            if (name == "Circles")
+            {
+                var pp = new ParamPusher { OpCodes = opCodes };
+                // (dst, amount, size, variance, InnerColor, OuterColor)
+                pp.AddPushInt32(node.GetProperty<Color>("Outer color").ToArgb());
+                pp.AddPushInt32(node.GetProperty<Color>("Inner color").ToArgb());
+                pp.AddPushFloat32(node.GetProperty<float>("Variance"));
+                pp.AddPushFloat32(node.GetProperty<float>("Size"));
+                pp.AddPushInt32(node.GetProperty<int>("Amount"));
+                pp.AddPushInt32(dstTexture);
+
+                pp.AddFunctionCall(GetNodeId(node.Name));
+
+                pp.AddPopStack();
+                opCodes = pp.OpCodes;
             }
 
             return true;

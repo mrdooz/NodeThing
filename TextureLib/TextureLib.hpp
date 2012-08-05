@@ -36,6 +36,10 @@ extern float dot(const Vector2 &a, const Vector2 &b);
 
 extern int tRand();
 
+#ifndef RAND_MAX
+#define RAND_MAX 0x7fff
+#endif
+
 template <typename T>
 T randf(T a, T b) {
   return a + (b-a) * tRand() / RAND_MAX;
@@ -49,7 +53,8 @@ T lerp(T a, T b, U v) {
 static const int cNumGradients = 16;
 
 void source_solid(int dstTexture, uint32 color);
-void source_noise(int dstTexture, float scaleX, float scaleY);
+void source_noise(int dstTexture, float scaleX, float scaleY, float offsetX, float offsetY);
+void source_circles(int dstTexture, int amount, float size, float variance, uint32 innerColor, uint32 outerColor);
 void modifier_add(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2);
 void modifier_sub(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2);
 void modifier_min(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2);

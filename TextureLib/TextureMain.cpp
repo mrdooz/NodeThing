@@ -34,6 +34,7 @@ static void *funcPtrs[] = {
   &modifier_max,
   &modifier_min,
   &modifier_mul,
+  &source_circles,
 };
 
 struct RenderData {

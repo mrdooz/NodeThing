@@ -12,6 +12,8 @@
 #include <xmmintrin.h>
 #endif
 
+static uint8 shiftAmount[] = {24, 16, 8, 0};
+
 Texture **gTextures;
 
 Vector2 operator+(const Vector2 &a, const Vector2 &b) {
@@ -32,10 +34,7 @@ float len(const Vector2 &v) {
 
 Vector2 normalize(const Vector2 &v) {
   float d = len(v);
-  if (d > 0.0f) {
-    return 1/d * v;
-  }
-  return v;
+  return 1/d * v;
 }
 
 float dot(const Vector2 &a, const Vector2 &b) {
@@ -51,10 +50,8 @@ void source_solid(int dstTexture, uint32 color) {
   Texture *texture = gTextures[dstTexture];
   float *p = (float *)texture->data;
   float rgba[4];
-  rgba[0] = ((color >> 24) & 0xff)/ 255.0f;
-  rgba[1] = ((color >> 16) & 0xff) / 255.0f;
-  rgba[2] = ((color >>  8) & 0xff) / 255.0f;
-  rgba[3] = ((color >>  0) & 0xff) / 255.0f;
+  for (int i = 0; i < 4; ++i)
+    rgba[i] = ((color >> shiftAmount[i]) & 0xff)/ 255.0f;
 
 #ifdef USE_SSE2
   __m128 col = _mm_load_ps(rgba);
@@ -78,11 +75,6 @@ void source_solid(int dstTexture, uint32 color) {
 
 float interpolate(float t) {
   return t*t*t*(t*(t*6-15)+10);
-  float t2 = t*t;
-  float t3 = t2*t;
-  float t4 = t2*t2;
-  float t5 = t3*t2;
-  return 6*t5-15*t4+10*t3;
 }
 
 float perlin_noise(float x, float y) {
@@ -115,18 +107,16 @@ float perlin_noise(float x, float y) {
   return nxy;
 }
 
-void source_noise(int dstTexture, float scaleX, float scaleY) {
+void source_noise(int dstTexture, float scaleX, float scaleY, float offsetX, float offsetY) {
   Texture *texture = gTextures[dstTexture];
   float *p = (float *)texture->data;
 
   int height = texture->height;
   int width = texture->width;
-
-
   for (int i = 0; i < height; ++i) {
     for (int j = 0; j  < width; ++j) {
-      float x = scaleX * j / width;
-      float y = scaleY * i / height;
+      float x = offsetX + scaleX * j / width;
+      float y = offsetY + scaleY * i / height;
 
       float n = perlin_noise(x, y);
       float n2 = perlin_noise(x+n, y);
@@ -136,6 +126,81 @@ void source_noise(int dstTexture, float scaleX, float scaleY) {
       p[2] = n3;
       p[3] = n3;
 
+      p += 4;
+    }
+  }
+}
+
+void source_turbulence(int dstTexture, int octaves, float scaleX, float scaleY, float offsetX, float offsetY) {
+  Texture *texture = gTextures[dstTexture];
+  float *p = (float *)texture->data;
+
+  int height = texture->height;
+  int width = texture->width;
+  for (int i = 0; i < height; ++i) {
+    for (int j = 0; j  < width; ++j) {
+      float x = offsetX + scaleX * j / width;
+      float y = offsetY + scaleY * i / height;
+
+      float n = perlin_noise(x, y);
+      float n2 = perlin_noise(x+n, y);
+      float n3 = perlin_noise(x+n2, y+2*n2);
+      p[0] = n3;
+      p[1] = n3;
+      p[2] = n3;
+      p[3] = n3;
+
+      p += 4;
+    }
+  }
+}
+
+void source_circles(int dstTexture, int amount, float size, float variance, uint32 innerColor, uint32 outerColor) {
+
+  struct Circle {
+    float x, y, radius;
+  };
+  const int cMaxCircles = 256;
+  static Circle circles[cMaxCircles];
+  amount = min(cMaxCircles, amount);
+
+  for (int i = 0; i < amount; ++i) {
+    circles[i].x = randf(0.0f, 1.0f);
+    circles[i].y = randf(0.0f, 1.0f);
+    circles[i].radius = size * size;  // saving size^2 to avoid a sqrt in the distance calc
+  }
+  
+  Texture *texture = gTextures[dstTexture];
+  float *p = (float *)texture->data;
+
+  int height = texture->height;
+  int width = texture->width;
+
+  float inner[4], outer[4];
+
+  for (int i = 0; i < 4; ++i) {
+    inner[i] = ((innerColor >> shiftAmount[i]) & 0xff)/ 255.0f;
+    outer[i] = ((outerColor >> shiftAmount[i]) & 0xff)/ 255.0f;
+  }
+
+  __m128 innerCol = _mm_loadu_ps(inner);
+  __m128 outerCol = _mm_loadu_ps(outer);
+
+  for (int i = 0; i < height; ++i) {
+    for (int j = 0; j  < width; ++j) {
+
+      float x = j / (float)width;
+      float y = i / (float)height;
+
+      _mm_store_ps(p, outerCol);
+      for (int k = 0; k < cMaxCircles; ++k) {
+        float dx = circles[k].x - x;
+        float dy = circles[k].y - y;
+        if (dx*dx+dy*dy < circles[k].radius) {
+          _mm_store_ps(p, innerCol);
+          break;
+        }
+      }
       p += 4;
     }
   }
