@@ -5,8 +5,6 @@
 #include "TextureLib.hpp"
 #include <stdint.h>
 #include <math.h>
-#include <d3dx9math.h>
-
 #include <xmmintrin.h>
 
 static uint8 shiftAmount[] = {24, 16, 8, 0};
@@ -64,6 +62,20 @@ float interpolate(float t) {
   return t*t*t*(t*(t*6-15)+10);
 }
 
+float bilinear(float *src, int width, int stride, float tx, float ty) {
+
+  // sample corners
+  float c00 = src[0];
+  float c10 = src[stride*width];
+  float c01 = src[stride];
+  float c11 = src[stride*(width+1)];
+
+  float v0 = lerp(c00, c01, tx);
+  float v1 = lerp(c10, c11, tx);
+
+  return lerp(v0, v1, ty);
+}
+
 enum BlendFunc {
   kBlendAdd,
   kBlendSub,
@@ -74,14 +86,14 @@ enum BlendFunc {
 
 void source_solid(int dstTexture, uint32 color) {
 
-  Texture *texture = gTextures[dstTexture];
+  const Texture *texture = gTextures[dstTexture];
   float *p = (float *)texture->data;
   float rgba[4];
   for (int i = 0; i < 4; ++i)
     rgba[i] = ((color >> shiftAmount[i]) & 0xff)/ 255.0f;
 
   __m128 col = _mm_load_ps(rgba);
-  int len = texture->len;
+  int len = texture->width * texture->height;
   for (int i = 0; i < len; ++i) {
     _mm_store_ps(p, col);
     p += 4;
@@ -91,13 +103,13 @@ void source_solid(int dstTexture, uint32 color) {
 
 void source_random(int dstTexture, float scale, uint32 seed) {
 
-  Texture *texture = gTextures[dstTexture];
+  const Texture *texture = gTextures[dstTexture];
   float *p = (float *)texture->data;
 
   int tmpSeed = randomSeed;
   randomSeed = seed;
 
-  int len = texture->len;
+  int len = texture->width * texture->height;
   for (int i = 0; i < len; ++i) {
     float v = scale * randf(0.0f, 1.0f);
     _mm_store_ps(p, _mm_set_ps1(v));
@@ -107,6 +119,10 @@ void source_random(int dstTexture, float scale, uint32 seed) {
   randomSeed = tmpSeed;
 }
 
+static const int cMaxCorners = 65;
+static const int cNumCorners[] = {0, 2, 3, 5, 9, 17, 33, 65};
+static float corners[4*cMaxCorners*cMaxCorners];
+
 void source_plasma(int dstTexture, float scale, int monochrome, int startOctave, int endOctave, int seed) {
   Texture *texture = gTextures[dstTexture];
   int tmpSeed = randomSeed;
@@ -114,11 +130,6 @@ void source_plasma(int dstTexture, float scale, int monochrome, int startOctave,
 
   int height = texture->height;
   int width = texture->width;
-
-  static const int cMaxCorners = 65;
-  static int cNumCorners[] = {0, 2, 3, 5, 9, 17, 33, 65};
-  static D3DXVECTOR4 corners[cMaxCorners*cMaxCorners];
-
 
   for (int i = 0; i < width*height*4; ++i) {
     texture->data[i] = 0;
@@ -129,32 +140,26 @@ void source_plasma(int dstTexture, float scale, int monochrome, int startOctave,
     int numCorners = cNumCorners[octave];
 
     int dx = width / (numCorners - 1);
-    int dy = width / (numCorners - 1);
+    int dy = height / (numCorners - 1);
 
     ASSERT((width % (numCorners - 1)) == 0);
     ASSERT((height % (numCorners - 1)) == 0);
 
     for (int i = 0; i < numCorners*numCorners; ++i) {
       if (monochrome) {
-        _mm_storeu_ps(corners[i], _mm_set_ps1(randf(0.0f, 1.0f)));
+        float v = randf(0.0f, 1.0f);
+        for (int j = 0; j < 4; ++j)
+          corners[i*4+j] = v;
       } else {
         for (int j = 0; j < 4; ++j)
-          corners[i][j] = randf(0.0f, 1.0f);
+          corners[i*4+j] = randf(0.0f, 1.0f);
       }
     }
 
-    D3DXVECTOR4 *p = (D3DXVECTOR4 *)texture->data;
+    float *p = texture->data;
 
     for (int i = 0; i < height; ++i) {
-      float y = (float)i / height;
       for (int j = 0; j  < width; ++j) {
-        float x = (float)j / width;
-
-        // get closest corners
-        auto c00 = corners[j/dx+0+(i/dy+0)*numCorners];
-        auto c10 = corners[j/dx+0+(i/dy+1)*numCorners];
-        auto c01 = corners[j/dx+1+(i/dy+0)*numCorners];
-        auto c11 = corners[j/dx+1+(i/dy+1)*numCorners];
 
         float ttx = (float)j/dx - j/dx;
         float tx = interpolate(ttx);
@@ -162,12 +167,9 @@ void source_plasma(int dstTexture, float scale, int monochrome, int startOctave,
         float tty = (float)i/dy - i/dy;
         float ty = interpolate(tty);
 
-        auto v0 = lerp(c00, c01, tx);
-        auto v1 = lerp(c10, c11, tx);
-        auto v = lerp(v0, v1, ty);
-
-        p[0] += scale * v;
-        p++;
+        float *tmp = &corners[4*(j/dx+0+(i/dy+0)*numCorners)];
+        for (int k = 0; k < 4; ++k)
+          *p++ = bilinear(tmp+k, numCorners, 4, tx, ty);
       }
     }
   }
@@ -239,13 +241,11 @@ void source_sinwaves(int dstTexture, float scale, int func, int numSin, float st
       phase += phaseDelta;
       freq += freqDelta;
 
-      __m128 m = _mm_set_ps1(v);
-      _mm_store_ps(p, m);
+      for (int k = 0; k < 4; ++k)
+        p[k] = v;
       p += 4;
-
     }
   }
-
 }
 
 float perlin_noise(float x, float y) {
@@ -254,28 +254,26 @@ float perlin_noise(float x, float y) {
   int gridY = ((int)y) & 0xff;
 
   // get corner gradients
-  Vector2 &g00 = gGrad[gPerm[gridX+gPerm[gridY]] % cNumGradients];
-  Vector2 &g01 = gGrad[gPerm[gridX+1+gPerm[gridY]] % cNumGradients];
-  Vector2 &g10 = gGrad[gPerm[gridX+gPerm[gridY+1]] % cNumGradients];
-  Vector2 &g11 = gGrad[gPerm[gridX+1+gPerm[gridY+1]] % cNumGradients];
+  const Vector2 &g00 = gGrad[gPerm[gridX+gPerm[gridY]] % cNumGradients];
+  const Vector2 &g01 = gGrad[gPerm[gridX+1+gPerm[gridY]] % cNumGradients];
+  const Vector2 &g10 = gGrad[gPerm[gridX+gPerm[gridY+1]] % cNumGradients];
+  const Vector2 &g11 = gGrad[gPerm[gridX+1+gPerm[gridY+1]] % cNumGradients];
 
   // relative pos within cell
   Vector2 pos(x - gridX, y - gridY);
 
   // dot between gradient and vectors from grid cells to P
-  float n00 = dot(g00, pos);
-  float n01 = dot(g01, Vector2(pos.x-1, pos.y));
-  float n10 = dot(g10, Vector2(pos.x, pos.y-1));
-  float n11 = dot(g11, Vector2(pos.x-1, pos.y-1));
+  float corners[4] = {
+    dot(g00, pos),
+    dot(g01, Vector2(pos.x-1, pos.y)),
+    dot(g10, Vector2(pos.x, pos.y-1)),
+    dot(g11, Vector2(pos.x-1, pos.y-1)),
+  };
 
   // bilinear interpolate
   float fx = interpolate(pos.x);
-  float nx0 = lerp(n00, n01, fx);
-  float nx1 = lerp(n10, n11, fx);
-
   float fy = interpolate(pos.y);
-  float nxy = lerp(nx0, nx1, fy);
-  return nxy;
+  return bilinear(corners, 2, 1, fx, fy);
 }
 
 void source_noise(int dstTexture, float scaleX, float scaleY, float offsetX, float offsetY) {
@@ -301,7 +299,7 @@ void source_noise(int dstTexture, float scaleX, float scaleY, float offsetX, flo
     }
   }
 }
-
+/*
 void source_turbulence(int dstTexture, int octaves, float scaleX, float scaleY, float offsetX, float offsetY) {
   Texture *texture = gTextures[dstTexture];
   float *p = (float *)texture->data;
@@ -325,15 +323,16 @@ void source_turbulence(int dstTexture, int octaves, float scaleX, float scaleY, 
     }
   }
 }
-
+*/
 struct Circle {
-  float x, y, radius;
+  float x, y, radius, dummy;
 };
+
+static const int cMaxCircles = 256;
+static Circle circles[cMaxCircles];
 
 void source_circles(int dstTexture, int amount, float size, float variance, float fade, uint32 innerColor, uint32 outerColor, uint32 seed) {
 
-  const int cMaxCircles = 256;
-  static Circle circles[cMaxCircles];
   amount = min(cMaxCircles, amount);
 
   int seedTmp = randomSeed;
@@ -421,7 +420,7 @@ void blend_inner(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTex
   ASSERT(dstTexture->width == srcTexture1->width && dstTexture->width == srcTexture2->width);
   ASSERT(dstTexture->height == srcTexture1->height && dstTexture->height == srcTexture2->height);
 
-  int len = dstTexture->len;
+  int len = dstTexture->width * dstTexture->height;
 
   __m128 blend_a = _mm_set_ps1(blend1);
   __m128 blend_b = _mm_set_ps1(blend2);
@@ -489,13 +488,13 @@ float wrap(float v) {
 void modifier_map_distort(int dstTextureIdx, int srcTextureIdx, int distortTextureIdx, float scale, int channels) {
 
   Texture *dstTexture = gTextures[dstTextureIdx];
-  D3DXVECTOR4 *dst = (D3DXVECTOR4 *)dstTexture->data;
+  float *dst = dstTexture->data;
 
   Texture *srcTexture = gTextures[srcTextureIdx];
-  D3DXVECTOR4 *src = (D3DXVECTOR4 *)srcTexture->data;
+  float *src = srcTexture->data;
 
   Texture *distortTexture = gTextures[distortTextureIdx];
-  D3DXVECTOR4 *distort = (D3DXVECTOR4 *)distortTexture->data;
+  float *distort = distortTexture->data;
 
   int height = dstTexture->height;
   int width = dstTexture->width;
@@ -506,9 +505,8 @@ void modifier_map_distort(int dstTextureIdx, int srcTextureIdx, int distortTextu
     for (int j = 0; j  < width; ++j) {
       float x = (float)j / width;
 
-      D3DXVECTOR4 v = *distort;
-      float tx = wrap(x + 2*scale*(v.x-0.5f));
-      float ty = wrap(y + 2*scale*(v.y-0.5f));
+      float tx = wrap(x + 2*scale*(distort[0]-0.5f));
+      float ty = wrap(y + 2*scale*(distort[1]-0.5f));
 
       int ix = (int)tx;
       int iy = (int)ty;
@@ -516,23 +514,15 @@ void modifier_map_distort(int dstTextureIdx, int srcTextureIdx, int distortTextu
       int tu = (int)(tx*(width-1));
       int tv = (int)(ty*(height-1));
 
-      D3DXVECTOR4 v00 = src[(tv+0)*width+(tu+0)];
-      D3DXVECTOR4 v01 = src[(tv+0)*width+(tu+1)];
-      D3DXVECTOR4 v10 = src[(tv+1)*width+(tu+0)];
-      D3DXVECTOR4 v11 = src[(tv+1)*width+(tu+1)];
-
       float ttx = tx - ix;
       float tty = ty - iy;
 
-      D3DXVECTOR4 x0 = lerp(v00, v01, ttx);
-      D3DXVECTOR4 x1 = lerp(v10, v11, ttx);
+      float *tmp = &src[4*((tv+0)*width+(tu+0))];
+      for (int k = 0; k < 4; ++k) {
+        *dst++ = bilinear(tmp, width, 4, ttx, tty);
+      }
+      distort += 4;
 
-      D3DXVECTOR4 xx = lerp(x0, x1, tty);
-
-      *dst = xx;
-
-      distort++;
-      dst++;
-    }
+   }
   }
 }

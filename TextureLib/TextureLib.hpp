@@ -6,23 +6,26 @@ typedef uint32_t uint32;
 typedef uint16_t uint16;
 typedef uint8_t uint8;
 
+#ifdef _DEBUG
 #define ASSERT(x) do { if (!(x)) _asm {int 3} } while(false);
+#else
+#define ASSERT(x) __assume(x);
+#endif
 
 struct Texture {
   float *data;  // RGBA
   int width;
   int height;
-  int len;
 };
 
 extern Texture **gTextures;
-
+/*
 struct Vector3 {
   Vector3() {}
   Vector3(float x, float y, float z) : x(x), y(y), z(z) {}
   float x, y, z;
 };
-
+*/
 struct Vector2 {
   Vector2() {}
   Vector2(float x, float y) : x(x), y(y) {}

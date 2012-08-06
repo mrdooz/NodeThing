@@ -102,7 +102,6 @@ DWORD WINAPI renderThread(void *param) {
       texture->data = new float[4*data->width*data->height];
       texture->width = data->width;
       texture->height = data->height;
-      texture->len = data->width * data->height;
       gTextures[i] = texture;
     }
 

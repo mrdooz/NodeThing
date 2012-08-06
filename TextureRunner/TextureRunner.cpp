@@ -80,9 +80,6 @@ void memcpy(void *dst, const void *src, int len) {
   }
 }
 
-
-typedef uint8_t uint8;
-
 IDirect3DDevice9 *gDevice;
 IDirect3D9 *gD3D;
 ID3DXMesh *gMesh;
@@ -115,7 +112,6 @@ unsigned char funky[195] = {
 };
 
 
-
 struct TextureHeader {
   uint16 width, height;
   uint8 numTextures, finalTexture;
@@ -144,8 +140,7 @@ void WINAPI fillTexture(D3DXVECTOR4* pOut, CONST D3DXVECTOR2* pTexCoord, CONST D
   int y = (int)((pTexCoord->y - pTexelSize->y/2) * h);
 
   float *src = &t->data[4*(y*w+x)];
-  _mm_storeu_ps((float *)pOut, 
-    _mm_min_ps(_mm_set_ps1(1), _mm_max_ps(_mm_set_ps1(0), _mm_load_ps(src))));
+  _mm_storeu_ps((float *)pOut, _mm_min_ps(_mm_set_ps1(1), _mm_max_ps(_mm_set_ps1(0), _mm_load_ps(src))));
 }
 
 void createTexture(const void *raw, int len, IDirect3DTexture9 **texture) {
@@ -163,7 +158,6 @@ void createTexture(const void *raw, int len, IDirect3DTexture9 **texture) {
     texture->data = (float *)VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     texture->width = header->width;
     texture->height = header->height;
-    texture->len = texture->width * texture->height;
     gTextures[i] = texture;
   }
 
