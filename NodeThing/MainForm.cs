@@ -14,7 +14,7 @@ namespace NodeThing
     {
         private readonly Type[] _knownTypes = {
             typeof (Size), typeof (Color),
-            typeof (NodeProperty<float>), typeof (NodeProperty<string>), typeof (NodeProperty<Size>), typeof (NodeProperty<Color>),
+            typeof (NodeProperty<int>), typeof (NodeProperty<float>), typeof (NodeProperty<string>), typeof (NodeProperty<Size>), typeof (NodeProperty<Color>),
             typeof (NodeProperty<Tuple<float, float>>)
         };
 

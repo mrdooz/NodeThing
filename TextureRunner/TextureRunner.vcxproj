@@ -88,6 +88,7 @@
       <OmitFramePointers>true</OmitFramePointers>
       <StructMemberAlignment>1Byte</StructMemberAlignment>
       <CallingConvention>Cdecl</CallingConvention>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

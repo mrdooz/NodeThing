@@ -38,16 +38,16 @@ namespace NodeThing
             g.DrawLine(pen, x, 0, x, drawPanel.Height);
         }
 
+        private void drawPanel_MouseDown(object sender, MouseEventArgs e)
+        {
+            ProcessMouseEvent(e);
+        }
+
         private void drawPanel_MouseMove(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left) {
                 ProcessMouseEvent(e);
             }
-        }
-
-        public static float Clamp(float value, float minValue, float maxValue)
-        {
-            return Math.Min(maxValue, Math.Max(value, minValue));
         }
 
         private void ProcessMouseEvent(MouseEventArgs e)
@@ -57,8 +57,8 @@ namespace NodeThing
             float valueY = prop.Min.Item2 + e.Y / (float)drawPanel.Height * (prop.Max.Item2 - prop.Min.Item2);
 
             prop.Value = new Tuple<float, float>(
-                Clamp(valueX, prop.Min.Item1, prop.Max.Item1),
-                Clamp(valueY, prop.Min.Item2, prop.Max.Item2)
+                Utils.Clamp(valueX, prop.Min.Item1, prop.Max.Item1),
+                Utils.Clamp(valueY, prop.Min.Item2, prop.Max.Item2)
                 );
 
             UpdateTextBox();
@@ -86,11 +86,6 @@ namespace NodeThing
                 textBox2.Text = prop.Value.Height.ToString();
             }
             _updatingTextbox = false;
-        }
-
-        private void drawPanel_MouseDown(object sender, MouseEventArgs e)
-        {
-            ProcessMouseEvent(e);
         }
 
         private void SetValuePair<T>(T value, int item) where T : IComparable<T>

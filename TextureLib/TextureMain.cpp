@@ -35,6 +35,10 @@ static void *funcPtrs[] = {
   &modifier_min,
   &modifier_mul,
   &source_circles,
+  &source_random,
+  &source_sinwaves,
+  &source_plasma,
+  &modifier_map_distort,
 };
 
 struct RenderData {
@@ -47,13 +51,6 @@ struct RenderData {
   vector<uint8> opCodes;
 };
 
-#define RAND_MAX_32 ((1U << 31) - 1)
-
-int tRand()
-{
-  static int seed = 0x12345;
-  return (seed = (seed * 214013 + 2531011) & RAND_MAX_32) >> 16;
-}
 
 
 // One queue per HWND
@@ -105,6 +102,7 @@ DWORD WINAPI renderThread(void *param) {
       texture->data = new float[4*data->width*data->height];
       texture->width = data->width;
       texture->height = data->height;
+      texture->len = data->width * data->height;
       gTextures[i] = texture;
     }
 
@@ -238,6 +236,16 @@ extern "C" {
     mem[7 + opCodeLen + 1] = 0xc3;
   }
 
+  void printInt8(FILE *f, uint8 v, const char *prefix, const char *suffix)
+  {
+    fprintf(f, "%s0x%.2x%s", prefix ? prefix : "", v & 0xff, suffix ? suffix : "");
+  }
+
+  void printInt16(FILE *f, uint16 v, const char *prefix, const char *suffix)
+  {
+    fprintf(f, "%s0x%.2x, 0x%.2x%s", prefix ? prefix : "", v & 0xff, (v >> 8) & 0xff, suffix ? suffix : "");
+  }
+
   void printInt32(FILE *f, int v, const char *prefix, const char *suffix)
   {
     fprintf(f, "%s0x%.2x, 0x%.2x, 0x%.2x, 0x%.2x%s", prefix ? prefix : "", v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, (v >> 24) & 0xff, suffix ? suffix : "");
@@ -248,14 +256,17 @@ extern "C" {
     vector<uint8> mem;
     patchOpCodes(opCodeLen, opCodes, &mem);
 
+    ASSERT(width < 65536 && height < 65536);
+    ASSERT(numTextures < 256 && finalTexture < 256);
+
     FILE *f = fopen(filename, "at");
     fseek(f, 0, SEEK_END);
-    fprintf(f, "unsigned char %s[%d] = {\n", name ? name : "dummy", 4*4+mem.size());
-    printInt32(f, width, "\t", ", ");
-    printInt32(f, height, "", ", // width, height\n");
+    fprintf(f, "unsigned char %s[%d] = {\n", name ? name : "dummy", 2*2+2*1+mem.size());
+    printInt16(f, width, "\t", ", ");
+    printInt16(f, height, "", ", // width, height\n");
 
-    printInt32(f, numTextures, "\t", ", ");
-    printInt32(f, finalTexture, "", ", // num textures, final texture\n\t");
+    printInt8(f, numTextures, "\t", ", ");
+    printInt8(f, finalTexture, "", ", // num textures, final texture\n\t");
 
     for (size_t i = 0; i < mem.size(); ++i) {
       fprintf(f, "0x%.2x%s%s", mem[i], 

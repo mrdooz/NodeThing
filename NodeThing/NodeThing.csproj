@@ -55,6 +55,7 @@
     </Compile>
     <Compile Include="NodeProperty.cs" />
     <Compile Include="TopologicalSorter.cs" />
+    <Compile Include="Utils.cs" />
     <Compile Include="ValueEditor2d.cs">
       <SubType>UserControl</SubType>
     </Compile>
