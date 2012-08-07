@@ -13,6 +13,4 @@ char test1_fx[] = "matrix b;"
 "c vsMain(d input){c f;matrix g=mul(b,e);f.pos=mul(input.pos,g);f.a=input.a;return f;}"
 "Texture a;"
 "sampler s0=sampler_state{Texture=(a); MipFilter=LINEAR;MinFilter=LINEAR;MagFilter=LINEAR;};"
-"float4 psMain(c input):COLOR0{return tex2D(s0,input.a);}"
-"technique t0{pass p0{vertexshader=compile vs_3_0 vsMain();pixelshader=compile ps_3_0 psMain();}}"
-;
+"float4 psMain(c input):COLOR0{return tex2D(s0,input.a);}";

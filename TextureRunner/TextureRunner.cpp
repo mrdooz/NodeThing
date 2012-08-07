@@ -34,8 +34,8 @@ static void *funcPtrs[] = {
   &modifier_map_distort,
 };
 
-extern int *gPerm;
-extern Vector2 *gGrad;
+extern int gPerm[];
+extern Vector2 gGrad[];
 
 extern Texture **gTextures;
 
@@ -80,6 +80,8 @@ void memcpy(void *dst, const void *src, int len) {
   }
 }
 
+
+ID3DXConstantTable *gConstantTable;
 IDirect3DDevice9 *gDevice;
 IDirect3D9 *gD3D;
 ID3DXMesh *gMesh;
@@ -110,21 +112,6 @@ unsigned char funky[195] = {
   0xcc,0xcc,0x3f,0x6a,0x00,0x68,0x00,0x00,0x60,0x40,0x6a,0x03,0x6a,0x01,0xff,0x90,
   0x18,0x00,0x00,0x00,0x81,0xc4,0x14,0x00,0x00,0x00,0x58,0x58,0xc3
 };
-
-unsigned char isnice[125] = {
-  0x00, 0x02, 0x00, 0x02, // width, height
-  0x03, 0x02, // num textures, final texture
-  0x50,0x8d,0x05,0x1c,0x10,0x1e,0x0f,0x50,0x68,0x55,0x15,0x0f,0x42,0x6a,0x04,0x6a,
-  0x01,0x6a,0x00,0x68,0x00,0x00,0x80,0x3f,0x6a,0x00,0xff,0x90,0x28,0x00,0x00,0x00,
-  0x81,0xc4,0x18,0x00,0x00,0x00,0x58,0x50,0x68,0x00,0x2c,0x1e,0x49,0x68,0x1a,0xc0,
-  0xe2,0xff,0x68,0x2b,0x2b,0xaf,0xff,0x68,0x00,0x00,0x00,0x00,0x68,0x00,0x00,0x80,
-  0x3f,0x68,0xcd,0xcc,0xcc,0x3d,0x6a,0x0a,0x6a,0x01,0xff,0x90,0x1c,0x00,0x00,0x00,
-  0x81,0xc4,0x20,0x00,0x00,0x00,0x58,0x50,0x68,0x33,0x33,0xb3,0x3f,0x6a,0x00,0x68,
-  0x00,0x00,0x00,0x40,0x6a,0x01,0x6a,0x02,0xff,0x90,0x08,0x00,0x00,0x00,0x81,0xc4,
-  0x14,0x00,0x00,0x00,0x58,0x58,0xc3
-};
-
-
 
 struct TextureHeader {
   uint16 width, height;
@@ -174,7 +161,6 @@ void createTexture(const void *raw, int len, IDirect3DTexture9 **texture) {
     texture->height = header->height;
     gTextures[i] = texture;
   }
-
 
   // Copy the opcodes to executable memory, and call that badboy!
   int opCodeLen = len - sizeof(TextureHeader);
@@ -288,11 +274,9 @@ void createMesh() {
 
 void __stdcall WinMainCRTStartup()
 {
-  gPerm = tNew<int>(512);
   for (int i = 0; i < 512; ++i)
     gPerm[i] = tRand() % 256;
 
-  gGrad = tNew<Vector2>(cNumGradients);
   for (int i = 0; i < cNumGradients; ++i)
     gGrad[i] = normalize(Vector2(randf(-1.0f,1.0f), randf(-1.0f,1.0f)));
 
@@ -301,44 +285,21 @@ void __stdcall WinMainCRTStartup()
   gHwnd = CreateWindow("static",0,WS_POPUP|WS_VISIBLE,0,0,xRes, yRes,0,0,0,0);
   gD3D->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, gHwnd, D3DCREATE_HARDWARE_VERTEXPROCESSING, &gPresentParmas, &gDevice);
 
-  ID3DXEffect *effect;
   ID3DXBuffer *errors;
+  ID3DXBuffer *shader;
+  D3DXCompileShader(test1_fx, sizeof(test1_fx), NULL, NULL, "vsMain", "vs_3_0", 0, &shader, &errors, &gConstantTable);
+  IDirect3DVertexShader9 *vs;
+  gDevice->CreateVertexShader((DWORD *)shader->GetBufferPointer(), &vs);
 
-#ifdef NO_SIZE_OPT
-  if (FAILED(D3DXCreateEffectFromFile(gDevice, "test1_c.fx", nullptr, nullptr, 0, nullptr, &effect, &errors))) {
-    const char *err = (const char *)errors->GetBufferPointer();
-    OutputDebugString(err);
-    ExitProcess(1);
-  }
-#else
-  //D3DXCreateEffect(gDevice, test1, sizeof(test1), nullptr, nullptr, 0, nullptr, &effect, &errors);
-  D3DXCreateEffect(gDevice, test1_fx, sizeof(test1_fx), nullptr, nullptr, 0, nullptr, &effect, &errors);
-#if _DEBUG
-  if (errors) {
-    const char *err = (const char *)errors->GetBufferPointer();
-    OutputDebugString(err);
-  }
-#endif
-  //const char *err = (const char *)errors->GetBufferPointer();
-
-#endif
+  D3DXCompileShader(test1_fx, sizeof(test1_fx), NULL, NULL, "psMain", "ps_3_0", 0, &shader, &errors, NULL);
+  IDirect3DPixelShader9 *ps;
+  gDevice->CreatePixelShader((DWORD *)shader->GetBufferPointer(), &ps);
 
   createMesh();
 
   setTruncate();
   IDirect3DTexture9 *tex;
   createTexture(funky, sizeof(funky), &tex);
-
-#ifdef NO_SIZE_OPT
-  D3DXHANDLE hWorld = effect->GetParameterByName(0, "World");
-  D3DXHANDLE hViewProj = effect->GetParameterByName(0, "ViewProj");
-  D3DXHANDLE hTexture = effect->GetParameterByName(0, "tex");
-#else
-  D3DXHANDLE hWorld = effect->GetParameterByName(0, VAR_WORLD);
-  D3DXHANDLE hViewProj = effect->GetParameterByName(0, VAR_VIEWPROJ);
-  D3DXHANDLE hTexture = effect->GetParameterByName(0, VAR_TEX);
-#endif
-  D3DXHANDLE hTechnique = effect->GetTechniqueByName("t0");
 
   D3DXMATRIX world, view, proj, viewProj;
   D3DXMatrixIdentity(&world);
@@ -352,21 +313,17 @@ void __stdcall WinMainCRTStartup()
     gDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, 0x000000, 1.0f, 0);
     gDevice->BeginScene();
 
-    effect->SetTechnique(hTechnique);
-    UINT numPasses = 0;
-    effect->Begin(&numPasses, 0);
-    effect->BeginPass(0);
+    gDevice->SetVertexShader(vs);
+    gDevice->SetPixelShader(ps);
 
     DWORD cur = timeGetTime() - start;
     D3DXMatrixRotationYawPitchRoll(&world, cur / 1000.0f, cur / 2000.0f, cur / 3000.0f);
 
-    effect->SetMatrix(hWorld, &world);
-    effect->SetMatrix(hViewProj, &viewProj);
-    effect->SetTexture(hTexture, tex);
-    gMesh->DrawSubset(0);
+    gConstantTable->SetMatrix(gDevice, VAR_WORLD, &world);
+    gConstantTable->SetMatrix(gDevice, VAR_VIEWPROJ, &viewProj);
+    gDevice->SetTexture(0, tex);
 
-    effect->EndPass();
-    effect->End();
+    gMesh->DrawSubset(0);
 
     gDevice->EndScene();
     gDevice->Present(0,0,0,0);

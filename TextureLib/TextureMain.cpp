@@ -13,9 +13,6 @@ using namespace std;
 
 HANDLE gHeapHandle = INVALID_HANDLE_VALUE;
 
-extern int *gPerm;
-extern Vector2 *gGrad;
-
 extern Texture **gTextures;
 
 HANDLE gRenderThread = INVALID_HANDLE_VALUE;
@@ -195,11 +192,9 @@ extern "C" {
     if (gHeapHandle == INVALID_HANDLE_VALUE)
       return false;
 
-    gPerm = new int[512];
     for (int i = 0; i < 512; ++i)
       gPerm[i] = tRand() % 256;
 
-    gGrad = new Vector2[cNumGradients];
     for (int i = 0; i < cNumGradients; ++i)
       gGrad[i] = normalize(Vector2(randf(-1.0f,1.0f), randf(-1.0f,1.0f)));
 
@@ -217,9 +212,6 @@ extern "C" {
   __declspec(dllexport) void closeTextureLib() {
     HeapDestroy(gHeapHandle);
     gHeapHandle = INVALID_HANDLE_VALUE;
-
-    delete [] gPerm;
-    delete [] gGrad;
 
     if (gRenderThread != INVALID_HANDLE_VALUE) {
       SetEvent(gCloseEvent);

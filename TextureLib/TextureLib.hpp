@@ -60,20 +60,22 @@ T lerp(T a, T b, U v) {
 }
 
 static const int cNumGradients = 16;
+extern int gPerm[512];
+extern Vector2 gGrad[cNumGradients];
 
-void source_solid(int dstTexture, uint32 color_argb);
-void source_noise(int dstTexture, float scaleX, float scaleY, float offsetX, float offsetY);
-void source_circles(int dstTexture, int amount, float size, float variance, float fade, uint32 innerColor_argb, uint32 outerColor_argb, uint32 seed);
-void source_random(int dstTexture, float scale, uint32 seed);
-void source_sinwaves(int dstTexture, float scale, int numSin, int func, float startAmp, float endAmp, float startPhase, float endPhase, float startFreq, float endFreq);
-void source_plasma(int dstTexture, float scale, int monochrome, int depth, int seed);
+void __cdecl source_solid(int dstTexture, uint32 color_argb);
+void __cdecl source_noise(int dstTexture, float scaleX, float scaleY, float offsetX, float offsetY);
+void __cdecl source_circles(int dstTexture, int amount, float size, float variance, float fade, uint32 innerColor_argb, uint32 outerColor_argb, uint32 seed);
+void __cdecl source_random(int dstTexture, float scale, uint32 seed);
+void __cdecl source_sinwaves(int dstTexture, float scale, int numSin, int func, float startAmp, float endAmp, float startPhase, float endPhase, float startFreq, float endFreq);
+void __cdecl source_plasma(int dstTexture, float scale, int monochrome, int depth, int seed);
 
-void modifier_add(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2);
-void modifier_sub(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2);
-void modifier_min(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2);
-void modifier_max(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2);
-void modifier_mul(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2);
-void modifier_invert(int dstTextureIdx, int srcTextureIdx);
-void modifier_grayscale(int dstTextureIdx, int srcTextureIdx);
-void modifier_map_distort(int dstTextureIdx, int srcTextureIdx, int distortTextureIdx, float scale, int channels);
+void __cdecl modifier_add(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2);
+void __cdecl modifier_sub(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2);
+void __cdecl modifier_min(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2);
+void __cdecl modifier_max(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2);
+void __cdecl modifier_mul(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2);
+void __cdecl modifier_invert(int dstTextureIdx, int srcTextureIdx);
+void __cdecl modifier_grayscale(int dstTextureIdx, int srcTextureIdx);
+void __cdecl modifier_map_distort(int dstTextureIdx, int srcTextureIdx, int distortTextureIdx, float scale, int channels);
 

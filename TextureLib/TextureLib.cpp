@@ -17,8 +17,8 @@ static uint8 shiftAmount_argb_to_rgba[] = {16, 8, 0, 24};
 Texture **gTextures;
 
 // Perlin noise variables
-int *gPerm;
-Vector2 *gGrad;
+int gPerm[512];
+Vector2 gGrad[cNumGradients];
 
 Vector2 operator+(const Vector2 &a, const Vector2 &b) {
   return Vector2(a.x+b.x, a.y+b.y);
@@ -94,7 +94,7 @@ enum BlendFunc {
   kBlendMax
 };
 
-void source_solid(int dstTexture, uint32 color_argb) {
+void __cdecl source_solid(int dstTexture, uint32 color_argb) {
 
   const Texture *texture = gTextures[dstTexture];
   float *p = (float *)texture->data;
@@ -111,7 +111,7 @@ void source_solid(int dstTexture, uint32 color_argb) {
 
 }
 
-void source_random(int dstTexture, float scale, uint32 seed) {
+void __cdecl source_random(int dstTexture, float scale, uint32 seed) {
 
   const Texture *texture = gTextures[dstTexture];
   float *p = (float *)texture->data;
@@ -140,7 +140,16 @@ struct PlasmaSettings {
   float roughness;
 };
 
-void midpoint_displacement(float *src, PlasmaSettings *settings, int depth, float p00, float p01, float p10, float p11) {
+#if 0
+struct PlasmaStack {
+  PlasmaStack() {}
+  PlasmaStack(float *src, int depth, float p00, float p01, float p10, float p11) : src(src), depth(depth), p00(p00), p01(p01), p10(p10), p11(p11) {}
+  float *src;
+  int depth;
+  float p00, p01, p10, p11;
+};
+
+void midpoint_displacement_flat(float *src, PlasmaSettings *settings, int depth, float p00, float p01, float p10, float p11) {
 
   // p00---top---p01
   //  |  0  |  1  |
@@ -150,9 +159,66 @@ void midpoint_displacement(float *src, PlasmaSettings *settings, int depth, floa
 
   int pitch = settings->pitch;
   int stride = settings->stride;
+  float roughness = settings->roughness;
+
+  int stackPtr = 0;
+  static PlasmaStack plasmaStack[1024];
+  plasmaStack[stackPtr++] = PlasmaStack(src, depth, p00, p01, p10, p11);
+
+  while (stackPtr) {
+    const PlasmaStack &cur = plasmaStack[--stackPtr];
+    src = cur.src;
+    depth = cur.depth;
+    p00 = cur.p00;
+    p01 = cur.p01;
+    p10 = cur.p10;
+    p11 = cur.p11;
+
+    int size = settings->orgSize / (1 << depth);
+    int logicalSize = settings->orgLogical / (1 << depth);
+
+    float top = (p00 + p01) / 2;
+    float left = (p00 + p10) / 2;
+    float right = (p01 + p11) / 2;
+    float bottom = (p10 + p11) / 2;
+
+    float middle = (p00 + p01 + p10 + p11) / 4 + logicalSize / 512.0f * randf(-roughness/2, 0.75f*roughness);
+
+    src[stride*size/2] = top;
+    src[pitch*size + stride*size/2] = bottom;
+
+    src[pitch*size/2] = left;
+    src[pitch*size/2 + stride*size] = right;
+
+    src[pitch*size/2 + stride*size/2] = middle;
+
+    if (size > 2) {
+      int s2 = size / 2;
+      int l2 = logicalSize / 2;
+      plasmaStack[stackPtr++] = PlasmaStack(src, depth + 1, p00, top, left, middle);
+      plasmaStack[stackPtr++] = PlasmaStack(src + stride*size/2, depth + 1, top, p01, middle, right);
+      plasmaStack[stackPtr++] = PlasmaStack(src + pitch*size/2, depth + 1, left, middle, p10, bottom);
+      plasmaStack[stackPtr++] = PlasmaStack(src + pitch*size/2 + stride*size/2, depth + 1, middle, right, bottom, p11);
+    }
+
+  }
+}
+#endif
+
+void midpoint_displacement_recurse(float *src, PlasmaSettings *settings, int depth, float p00, float p01, float p10, float p11) {
+
+  // p00---top---p01
+  //  |  0  |  1  |
+  // lft---mid---rgt
+  //  |  2  |  3  |
+  // p10---btm---p11
+
+  int pitch = settings->pitch;
+  int stride = settings->stride;
+  float roughness = settings->roughness;
+
   int size = settings->orgSize / (1 << depth);
   int logicalSize = settings->orgLogical / (1 << depth);
-  float roughness = settings->roughness;
 
   float top = (p00 + p01) / 2;
   float left = (p00 + p10) / 2;
@@ -172,24 +238,20 @@ void midpoint_displacement(float *src, PlasmaSettings *settings, int depth, floa
   if (size > 2) {
     int s2 = size / 2;
     int l2 = logicalSize / 2;
-    midpoint_displacement(src, settings, depth + 1, p00, top, left, middle);
-    midpoint_displacement(src + stride*size/2, settings, depth + 1, top, p01, middle, right);
-    midpoint_displacement(src + pitch*size/2, settings, depth + 1, left, middle, p10, bottom);
-    midpoint_displacement(src + pitch*size/2 + stride*size/2, settings, depth + 1, middle, right, bottom, p11);
+    midpoint_displacement_recurse(src, settings, depth + 1, p00, top, left, middle);
+    midpoint_displacement_recurse(src + stride*size/2, settings, depth + 1, top, p01, middle, right);
+    midpoint_displacement_recurse(src + pitch*size/2, settings, depth + 1, left, middle, p10, bottom);
+    midpoint_displacement_recurse(src + pitch*size/2 + stride*size/2, settings, depth + 1, middle, right, bottom, p11);
   }
 }
 
-void source_plasma(int dstTexture, float scale, int monochrome, int depth, int seed) {
+void __cdecl source_plasma(int dstTexture, float scale, int monochrome, int depth, int seed) {
   Texture *texture = gTextures[dstTexture];
   int tmpSeed = gRandomSeed;
   gRandomSeed = seed;
 
   int height = texture->height;
   int width = texture->width;
-
-  for (int i = 0; i < width*height*4; ++i) {
-    texture->data[i] = 0;
-  }
 
   int gridSize = cGridSize[depth];
 
@@ -212,7 +274,7 @@ void source_plasma(int dstTexture, float scale, int monochrome, int depth, int s
     float v01 = corners[4*g+k] = v;
     float v10 = corners[4*(gridSize*g)+k] = v;
     float v11 = corners[4*(gridSize*g+g)+k] = v;
-    midpoint_displacement(corners+k, &settings, 0, v00, v01, v10, v11);
+    midpoint_displacement_recurse(corners+k, &settings, 0, v00, v01, v10, v11);
   }
 
   if (monochrome)
@@ -249,7 +311,7 @@ enum SinFunc {
   kSinCos1,
 };
 
-void source_sinwaves(int dstTexture, float scale, int func, int numSin, float startAmp, float endAmp, float startPhase, float endPhase, float startFreq, float endFreq) {
+void __cdecl source_sinwaves(int dstTexture, float scale, int func, int numSin, float startAmp, float endAmp, float startPhase, float endPhase, float startFreq, float endFreq) {
   Texture *texture = gTextures[dstTexture];
   float *p = (float *)texture->data;
 
@@ -340,7 +402,7 @@ float perlin_noise(float x, float y) {
   return bilinear(corners, 2, 1, fx, fy);
 }
 
-void source_noise(int dstTexture, float scaleX, float scaleY, float offsetX, float offsetY) {
+void __cdecl source_noise(int dstTexture, float scaleX, float scaleY, float offsetX, float offsetY) {
   Texture *texture = gTextures[dstTexture];
   float *p = (float *)texture->data;
 
@@ -395,7 +457,7 @@ struct Circle {
 static const int cMaxCircles = 256;
 static Circle circles[cMaxCircles];
 
-void source_circles(int dstTexture, int amount, float size, float variance, float fade, uint32 innerColor_argb, uint32 outerColor_argb, uint32 seed) {
+void __cdecl source_circles(int dstTexture, int amount, float size, float variance, float fade, uint32 innerColor_argb, uint32 outerColor_argb, uint32 seed) {
 
   amount = min(cMaxCircles, amount);
 
@@ -507,31 +569,31 @@ void blend_inner(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTex
   }
 }
 
-void modifier_add(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2) {
+void __cdecl modifier_add(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2) {
   blend_inner(dstTextureIdx, srcTexture1Idx, blend1, srcTexture2Idx, blend2, kBlendAdd);
 }
 
-void modifier_sub(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2) {
+void __cdecl modifier_sub(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2) {
   blend_inner(dstTextureIdx, srcTexture1Idx, blend1, srcTexture2Idx, blend2, kBlendSub);
 }
 
-void modifier_max(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2) {
+void __cdecl modifier_max(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2) {
   blend_inner(dstTextureIdx, srcTexture1Idx, blend1, srcTexture2Idx, blend2, kBlendMax);
 }
 
-void modifier_min(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2) {
+void __cdecl modifier_min(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2) {
   blend_inner(dstTextureIdx, srcTexture1Idx, blend1, srcTexture2Idx, blend2, kBlendMin);
 }
 
-void modifier_mul(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2) {
+void __cdecl modifier_mul(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2) {
   blend_inner(dstTextureIdx, srcTexture1Idx, blend1, srcTexture2Idx, blend2, kBlendMul);
 }
 
-void modifier_invert(int dstTextureIdx, int srcTextureIdx) {
+void __cdecl modifier_invert(int dstTextureIdx, int srcTextureIdx) {
 
 }
 
-void modifier_grayscale(int dstTextureIdx, int srcTextureIdx) {
+void __cdecl modifier_grayscale(int dstTextureIdx, int srcTextureIdx) {
 
 }
 
@@ -549,7 +611,7 @@ float wrap(float v) {
   return v;
 }
 
-void modifier_map_distort(int dstTextureIdx, int srcTextureIdx, int distortTextureIdx, float scale, int channels) {
+void __cdecl modifier_map_distort(int dstTextureIdx, int srcTextureIdx, int distortTextureIdx, float scale, int channels) {
 
   Texture *dstTexture = gTextures[dstTextureIdx];
   float *dst = dstTexture->data;
