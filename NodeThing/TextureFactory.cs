@@ -103,10 +103,10 @@ namespace NodeThing
 
             if (name == "Plasma") {
                 node.SetOutput("Output", Connection.Type.Texture);
-                node.AddProperty("Scale", 0.3f, 0.0f, 1.0f);
+                node.AddProperty("Scale", 1.0f, 0.0f, 5.0f);
                 node.AddProperty("Monochrome", 0, 0, 1);
-                node.AddProperty("Start octave", 1, 1, 6);
-                node.AddProperty("End octave", 4, 1, 6);
+                node.AddProperty("Start octave", 1, 1, 9);
+                node.AddProperty("End octave", 4, 1, 9);
                 node.AddProperty("Seed", rnd.Next());
             }
 
@@ -143,8 +143,8 @@ namespace NodeThing
             var pp = new ParamPusher { OpCodes = opCodes };
 
             if (name == "Solid") {
-                pp.AddPushInt32(node.GetProperty<Color>("Color").ToArgb());
-                pp.AddPushInt32(dstTexture);
+                pp.AddPushUInt32((UInt32)node.GetProperty<Color>("Color").ToArgb());
+                pp.AddPushUInt32((UInt32)dstTexture);
             }
 
             if (name == "Noise") {
@@ -155,7 +155,7 @@ namespace NodeThing
                 pp.AddPushFloat32(scale.Item2);
                 pp.AddPushFloat32(offset.Item2);
                 pp.AddPushFloat32(offset.Item1);
-                pp.AddPushInt32(dstTexture);
+                pp.AddPushUInt32((UInt32)dstTexture);
             }
 
             if (name == "Add" || name == "Sub" || name == "Mul" || name == "Max" || name == "Min") {
@@ -167,10 +167,10 @@ namespace NodeThing
                 // (dst, src1, scale 1, src2, scale 2)
                 var blend = node.GetProperty<Tuple<float, float>>("Blend");
                 pp.AddPushFloat32(blend.Item2);
-                pp.AddPushInt32(srcTexture2);
+                pp.AddPushUInt32((UInt32)srcTexture2);
                 pp.AddPushFloat32(blend.Item1);
-                pp.AddPushInt32(srcTexture1);
-                pp.AddPushInt32(dstTexture);
+                pp.AddPushUInt32((UInt32)srcTexture1);
+                pp.AddPushUInt32((UInt32)dstTexture);
             }
 
             if (name == "Distort") {
@@ -181,32 +181,32 @@ namespace NodeThing
                 var srcTexture1 = step.InputTextures[0];
                 var srcTexture2 = step.InputTextures[1];
 
-                pp.AddPushInt32(node.GetProperty<int>("Channels"));
+                pp.AddPushUInt32((UInt32)node.GetProperty<int>("Channels"));
                 pp.AddPushFloat32(node.GetProperty<float>("Scale"));
-                pp.AddPushInt32(srcTexture1);
-                pp.AddPushInt32(srcTexture1);
-                pp.AddPushInt32(dstTexture);
+                pp.AddPushUInt32((UInt32)srcTexture1);
+                pp.AddPushUInt32((UInt32)srcTexture1);
+                pp.AddPushUInt32((UInt32)dstTexture);
 
             }
 
             if (name == "Circles")
             {
                 // (dst, amount, size, variance, InnerColor, OuterColor, randomSeed)
-                pp.AddPushInt32(node.GetProperty<int>("Seed"));
-                pp.AddPushInt32(node.GetProperty<Color>("Outer color").ToArgb());
-                pp.AddPushInt32(node.GetProperty<Color>("Inner color").ToArgb());
+                pp.AddPushUInt32((UInt32)node.GetProperty<int>("Seed"));
+                pp.AddPushUInt32((UInt32)node.GetProperty<Color>("Outer color").ToArgb());
+                pp.AddPushUInt32((UInt32)node.GetProperty<Color>("Inner color").ToArgb());
                 pp.AddPushFloat32(node.GetProperty<float>("Fade"));
                 pp.AddPushFloat32(node.GetProperty<float>("Variance"));
                 pp.AddPushFloat32(node.GetProperty<float>("Size"));
-                pp.AddPushInt32(node.GetProperty<int>("Amount"));
-                pp.AddPushInt32(dstTexture);
+                pp.AddPushUInt32((UInt32)node.GetProperty<int>("Amount"));
+                pp.AddPushUInt32((UInt32)dstTexture);
             }
 
             if (name == "Random") {
                 // (dst, scale, seed)
-                pp.AddPushInt32(node.GetProperty<int>("Seed"));
+                pp.AddPushUInt32((UInt32)node.GetProperty<int>("Seed"));
                 pp.AddPushFloat32(node.GetProperty<float>("Scale"));
-                pp.AddPushInt32(dstTexture);
+                pp.AddPushUInt32((UInt32)dstTexture);
             }
 
             if (name == "Sinwaves") {
@@ -218,23 +218,25 @@ namespace NodeThing
                 pp.AddPushFloat32(node.GetProperty<float>("Start phase"));
                 pp.AddPushFloat32(node.GetProperty<float>("End amp"));
                 pp.AddPushFloat32(node.GetProperty<float>("Start amp"));
-                pp.AddPushInt32(node.GetProperty<int>("Num sin"));
-                pp.AddPushInt32(node.GetProperty<int>("Func"));
+                pp.AddPushUInt32((UInt32)node.GetProperty<int>("Num sin"));
+                pp.AddPushUInt32((UInt32)node.GetProperty<int>("Func"));
                 pp.AddPushFloat32(node.GetProperty<float>("Scale"));
-                pp.AddPushInt32(dstTexture);
+                pp.AddPushUInt32((UInt32)dstTexture);
             }
 
             if (name == "Plasma") {
                 // void source_plasma(int dstTexture, float scale, int monochrome, int startOctave, int endOctave, randomSeed);
 
-                pp.AddPushInt32(node.GetProperty<int>("Seed"));
+                pp.AddPushUInt32((UInt32)node.GetProperty<int>("Seed"));
                 var startOctave = node.GetProperty<int>("Start octave");
                 var endOctave = node.GetProperty<int>("End octave");
-                pp.AddPushInt32(Math.Max(startOctave, endOctave));
-                pp.AddPushInt32(Math.Min(startOctave, endOctave));
-                pp.AddPushInt32(node.GetProperty<int>("Monochrome"));
+                //pp.AddPushUInt32(Math.Max(startOctave, endOctave));
+                //pp.AddPushUInt32(Math.Min(startOctave, endOctave));
+                pp.AddPushUInt32((UInt32)endOctave);
+                pp.AddPushUInt32((UInt32)startOctave);
+                pp.AddPushUInt32((UInt32)node.GetProperty<int>("Monochrome"));
                 pp.AddPushFloat32(node.GetProperty<float>("Scale"));
-                pp.AddPushInt32(dstTexture);
+                pp.AddPushUInt32((UInt32)dstTexture);
             }
 
             pp.AddFunctionCall(GetNodeId(node.Name));
@@ -286,15 +288,15 @@ namespace NodeThing
 
         class ParamPusher
         {
-            public void AddPushInt32(Int32 value)
+            public void AddPushUInt32(UInt32 value)
             {
                 // use 8 bit push if value fits
                 if (value < 256) {
                     OpCodes.Add(0x6a);
-                    AddUint8((byte)value);
+                    AddUInt8((byte)value);
                 } else {
                     OpCodes.Add(0x68);
-                    AddInt32(value);
+                    AddUInt32(value);
                 }
                 _stackFixupSize += 4;
             }
@@ -308,26 +310,26 @@ namespace NodeThing
                 _stackFixupSize += 4;
             }
 
-            public void AddPushInt16(Int16 value)
+            public void AddPushUInt16(UInt16 value)
             {
                 OpCodes.Add(0x66);
                 OpCodes.Add(0x68);
-                AddInt16(value);
+                AddUInt16(value);
                 _stackFixupSize += 2;
             }
 
-            public void AddUint8(byte value)
+            public void AddUInt8(byte value)
             {
                 OpCodes.Add(value);
             }
 
-            public void AddInt16(Int16 value)
+            public void AddUInt16(UInt16 value)
             {
                 OpCodes.Add((byte)((value >> 0) & 0xff));
                 OpCodes.Add((byte)((value >> 8) & 0xff));
             }
 
-            public void AddInt32(Int32 value)
+            public void AddUInt32(UInt32 value)
             {
                 OpCodes.Add((byte)((value >> 0) & 0xff));
                 OpCodes.Add((byte)((value >> 8) & 0xff));
@@ -339,7 +341,7 @@ namespace NodeThing
             {
                 OpCodes.Add(0x81);
                 OpCodes.Add(0xc4);
-                AddInt32(_stackFixupSize);
+                AddUInt32((UInt32)_stackFixupSize);
             }
 
             public void AddFunctionCall(Int32 functionId)
@@ -347,7 +349,7 @@ namespace NodeThing
                 // generate "call [eax + functionId*4]"
                 OpCodes.Add(0xff);
                 OpCodes.Add(0x90);
-                AddInt32(functionId * 4);
+                AddUInt32((UInt32)(functionId * 4));
             }
 
             public List<byte> OpCodes { get; set; }

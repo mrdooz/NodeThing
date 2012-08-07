@@ -51,7 +51,6 @@ namespace NodeThing
             this.flowLayoutPanel.Name = "flowLayoutPanel";
             this.flowLayoutPanel.Size = new System.Drawing.Size(1082, 519);
             this.flowLayoutPanel.TabIndex = 2;
-            this.flowLayoutPanel.Paint += new System.Windows.Forms.PaintEventHandler(this.flowLayoutPanel_Paint);
             // 
             // previewPanel
             // 
@@ -59,6 +58,7 @@ namespace NodeThing
             this.previewPanel.Name = "previewPanel";
             this.previewPanel.Size = new System.Drawing.Size(512, 512);
             this.previewPanel.TabIndex = 0;
+            this.previewPanel.Paint += new System.Windows.Forms.PaintEventHandler(this.previewPanel_Paint);
             // 
             // sinkPanel
             // 
@@ -97,6 +97,7 @@ namespace NodeThing
             this.displayTextureName.TabIndex = 0;
             this.displayTextureName.Text = "Display texture name";
             this.displayTextureName.UseVisualStyleBackColor = true;
+            this.displayTextureName.CheckedChanged += new System.EventHandler(this.displayTextureName_CheckedChanged);
             // 
             // DisplayForm
             // 

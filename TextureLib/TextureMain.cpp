@@ -23,7 +23,7 @@ HANDLE gCloseEvent = INVALID_HANDLE_VALUE;
 HANDLE gNewDataEvent = INVALID_HANDLE_VALUE;
 CRITICAL_SECTION gRenderCs;
 
-typedef void(__stdcall *fnCompletedCallback)(HWND hwnd);
+typedef void(__stdcall *fnCompletedCallback)(HANDLE handle);
 fnCompletedCallback gCompletedCallback;
 
 static void *funcPtrs[] = {
@@ -42,7 +42,7 @@ static void *funcPtrs[] = {
 };
 
 struct RenderData {
-  HWND hwnd;
+  HANDLE handle;
   int width;
   int height;
   int numTextures;
@@ -51,10 +51,66 @@ struct RenderData {
   vector<uint8> opCodes;
 };
 
+void renderToBitmap(float *src, int width, int height, HANDLE handle) {
+
+  BITMAP bitmap;
+  GetObject(handle, sizeof (BITMAP), &bitmap) ;
+
+  HDC dcDst = CreateCompatibleDC(NULL);
+  if (!SelectObject(dcDst, handle)) {
+    OutputDebugStringA("SelectObject failed\n");
+    return;
+  }
+
+  HDC dcSrc = CreateCompatibleDC(dcDst);
+
+  // Create DIB section to copy data to
+  BITMAPINFO bmi;
+  ZeroMemory(&bmi, sizeof(bmi));
+  bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+
+  bmi.bmiHeader.biPlanes = 1;
+  bmi.bmiHeader.biBitCount = 32;
+  bmi.bmiHeader.biCompression = BI_RGB;
+  bmi.bmiHeader.biWidth = width;
+  bmi.bmiHeader.biHeight = -height;
+
+  DWORD *dst;
+  HBITMAP bm = CreateDIBSection(dcSrc, &bmi, DIB_RGB_COLORS, (void **)&dst, NULL, 0);
+
+  for (int i = 0; i < height; ++i) {
+    for (int j = 0; j < width; ++j) {
+      // DIB uses ARGB (from MSB to LSB), and we use RGBA
+      uint8 r = (uint8)(255 * max(0, min(src[0], 1)));
+      uint8 g = (uint8)(255 * max(0, min(src[1], 1)));
+      uint8 b = (uint8)(255 * max(0, min(src[2], 1)));
+      *dst++ = (r << 16) | (g << 8) | b;
+      src += 4;
+    }
+  }
+
+  GdiFlush();
+
+  if (!SelectObject(dcSrc, bm)) {
+    OutputDebugStringA("SelectObject failed\n");
+    return;
+  }
+
+  // Blit the DIB to the given bitmap
+
+  if (!StretchBlt(dcDst, 0, 0, bitmap.bmWidth, bitmap.bmHeight, dcSrc, 0, 0, width, height, SRCCOPY)) {
+    OutputDebugStringA("StretchDIBits failed\n");
+    return;
+  }
+
+  DeleteDC(dcSrc);
+  DeleteDC(dcDst);
+  DeleteObject(bm);
+}
 
 
-// One queue per HWND
-map<HWND, deque<RenderData *> >gRenderQueue;
+// One queue per HANDLE
+map<HANDLE, deque<RenderData *> >gRenderQueue;
 
 DWORD WINAPI renderThread(void *param) {
 
@@ -114,43 +170,9 @@ DWORD WINAPI renderThread(void *param) {
     }
     HeapFree(gHeapHandle, 0, mem);
 
-    HDC dc = GetDC(data->hwnd);
+    renderToBitmap(gTextures[data->finalTexture]->data, data->width, data->height, data->handle);
 
-    BITMAPINFO bmi;
-    ZeroMemory(&bmi, sizeof(bmi));
-    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-
-    bmi.bmiHeader.biPlanes = 1;
-    bmi.bmiHeader.biBitCount = 32;
-    bmi.bmiHeader.biCompression = BI_RGB;
-    bmi.bmiHeader.biWidth = data->width;
-    bmi.bmiHeader.biHeight = -data->height;
-
-    uint8 *dst;
-    HBITMAP bm = CreateDIBSection(dc, &bmi, DIB_RGB_COLORS, (void **)&dst, NULL, 0);
-
-    // Copy the dest texture to the hwnd
-    float *src = gTextures[data->finalTexture]->data;
-    for (int i = 0; i < data->height; ++i) {
-      for (int j = 0; j < data->width; ++j) {
-        dst[3] = (uint8)(255 * max(0, min(src[0], 1)));
-        dst[2] = (uint8)(255 * max(0, min(src[1], 1)));
-        dst[1] = (uint8)(255 * max(0, min(src[2], 1)));
-        dst[0] = (uint8)(255 * max(0, min(src[3], 1)));
-        dst += 4;
-        src += 4;
-      }
-    }
-
-    HWND hwnd = data->hwnd;
-    HDC src_dc = CreateCompatibleDC(dc);
-    SelectObject(src_dc, bm);
-    BitBlt(dc, 0, 0, 512, 512, src_dc, 0, 0, SRCCOPY);
-
-    DeleteDC(src_dc);
-    DeleteObject(bm);
-
-    ReleaseDC(hwnd, dc);
+    gCompletedCallback(data->handle);
 
     for (int i = 0; i < data->numTextures; ++i) {
       delete [] gTextures[i]->data;
@@ -159,9 +181,6 @@ DWORD WINAPI renderThread(void *param) {
 
     delete [] gTextures;
     delete data;
-
-    gCompletedCallback(hwnd);
-
   }
   return 0;
 }
@@ -278,10 +297,10 @@ extern "C" {
     fclose(f);
   }
 
-  __declspec(dllexport) void renderTexture(HWND hwnd, int width, int height, int numTextures, int finalTexture, const char *name, int opCodeLen, const uint8 *opCodes) {
+  __declspec(dllexport) void renderTexture(HANDLE handle, int width, int height, int numTextures, int finalTexture, const char *name, int opCodeLen, const uint8 *opCodes) {
 
     auto rd = new RenderData;
-    rd->hwnd = hwnd;
+    rd->handle = handle;
     rd->width = width;
     rd->height = height;
     rd->numTextures = numTextures;
@@ -290,7 +309,7 @@ extern "C" {
     patchOpCodes(opCodeLen, opCodes, &rd->opCodes);
 
     EnterCriticalSection(&gRenderCs);
-    gRenderQueue[hwnd].push_back(rd);
+    gRenderQueue[handle].push_back(rd);
     LeaveCriticalSection(&gRenderCs);
 
     SetEvent(gNewDataEvent);
