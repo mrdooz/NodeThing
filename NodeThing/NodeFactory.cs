@@ -17,7 +17,7 @@ namespace NodeThing
         }
 
         public abstract Node CreateNode(string name, Point pos);
-        public abstract void DisplaySequence(GeneratorSequence seq, IntPtr displayHandle);
+        public abstract void DisplaySequence(GeneratorSequence seq, IntPtr displayHandle, IntPtr key);
         public abstract void GenerateCode(GeneratorSequence seq, string filename);
 
         public List<String> NodeNames()

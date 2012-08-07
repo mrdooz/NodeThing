@@ -11,8 +11,8 @@ namespace NodeThing
     {
         public event EventHandler ValueChanged;
         private NodePropertyBase _property;
-
         private bool _updatingTextbox;
+        private bool _useBounds = true;
 
         public ValueEditor(string name, NodePropertyBase property, EventHandler handler)
         {
@@ -24,7 +24,6 @@ namespace NodeThing
 
             if (!_property.IsBounded) {
                 drawPanel.Hide();
-                useBounds.Hide();
                 textBox.Size = new Size(drawPanel.Bounds.Right - textBox.Bounds.Left, textBox.Size.Height);
             }
         }
@@ -32,7 +31,7 @@ namespace NodeThing
         private void drawPanel_Paint(object sender, PaintEventArgs e)
         {
             var g = e.Graphics;
-            g.FillRectangle(Brushes.BurlyWood, 0, 0, drawPanel.Width, drawPanel.Height);
+            g.FillRectangle(_useBounds ? Brushes.BurlyWood : Brushes.DarkOliveGreen, 0, 0, drawPanel.Width, drawPanel.Height);
 
             int x = 0;
             if (_property.PropertyType == PropertyType.Int) {
@@ -60,7 +59,7 @@ namespace NodeThing
             var p = (NodeProperty<T>)prop;
             var orgValue = value;
 
-            if (p.IsBounded && useBounds.Checked) {
+            if (p.IsBounded && _useBounds) {
                 if (value.CompareTo(p.Max) > 0)
                     value = p.Max;
                 if (value.CompareTo(p.Min) < 0)
@@ -112,7 +111,12 @@ namespace NodeThing
 
         private void drawPanel_MouseDown(object sender, MouseEventArgs e)
         {
-            ProcessMouseEvent(e);
+            if (e.Button == MouseButtons.Left) {
+                ProcessMouseEvent(e);
+            } else if (e.Button == MouseButtons.Right) {
+                _useBounds = !_useBounds;
+                drawPanel.Invalidate();
+            }
         }
 
         private void drawPanel_MouseMove(object sender, MouseEventArgs e)

@@ -6,13 +6,13 @@ namespace NodeThing
 {
     public enum PropertyType
     {
+        Bool,
         Float,
         Float2,
         Int,
         Int2,
         Size,
         Color,
-
         String,
     }
 
@@ -55,6 +55,8 @@ namespace NodeThing
                 PropertyType = PropertyType.Color;
             } else if (t == typeof(String)) {
                 PropertyType = PropertyType.String;
+            } else if (t == typeof(bool)) {
+                PropertyType = PropertyType.Bool;
             } else {
                 throw new Exception("Unhandled property type: " + value.GetType());
             }
@@ -75,7 +77,6 @@ namespace NodeThing
             IsBounded = true;
             SetPropertyType(value);
         }
-
 
         public override string ToString()
         {

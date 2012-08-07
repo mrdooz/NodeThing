@@ -14,8 +14,9 @@ namespace NodeThing
     {
         private readonly Type[] _knownTypes = {
             typeof (Size), typeof (Color),
+            typeof (NodeProperty<bool>), 
             typeof (NodeProperty<int>), typeof (NodeProperty<float>), typeof (NodeProperty<string>), typeof (NodeProperty<Size>), typeof (NodeProperty<Color>),
-            typeof (NodeProperty<Tuple<float, float>>)
+            typeof (NodeProperty<Tuple<int, int>>), typeof (NodeProperty<Tuple<float, float>>)
         };
 
         private NodeFactory _factory;
@@ -251,8 +252,9 @@ namespace NodeThing
                         var seqs = Settings.Graph.GenerateSequenceFromSelected(node, new Size(512, 512));
                         _displayForm.BeginAddPanels();
                         foreach (var s in seqs) {
-                            var handle = s.IsPreview ? _displayForm.GetPreviewHandle() : _displayForm.GetSinkHandle(s.Name);
-                            _factory.DisplaySequence(s, handle);
+                            IntPtr key;
+                            var handle = s.IsPreview ? _displayForm.GetPreviewHandle(out key) : _displayForm.GetSinkHandle(s.Name, out key);
+                            _factory.DisplaySequence(s, handle, key);
                         }
                         _displayForm.EndAddPanels();
                     };
@@ -266,6 +268,10 @@ namespace NodeThing
                 UserControl editor = null;
 
                 switch (prop.PropertyType) {
+                    case PropertyType.Bool:
+                        editor = new BooleanEditor(key, prop, propertyChanged);
+                    break;
+
                     case PropertyType.Float:
                     case PropertyType.Int:
                     case PropertyType.String:

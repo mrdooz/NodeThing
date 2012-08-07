@@ -28,44 +28,17 @@ namespace NodeThing
         /// </summary>
         private void InitializeComponent()
         {
+            this.splitContainer1 = new System.Windows.Forms.SplitContainer();
+            this.displayTextureName = new System.Windows.Forms.CheckBox();
             this.flowLayoutPanel = new NodeThing.DisplayFlowLayoutPanel();
             this.previewPanel = new NodeThing.DoublBufferedPanel();
             this.sinkPanel = new NodeThing.DoublBufferedPanel();
-            this.splitContainer1 = new System.Windows.Forms.SplitContainer();
-            this.displayTextureName = new System.Windows.Forms.CheckBox();
-            this.flowLayoutPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
             this.splitContainer1.SuspendLayout();
+            this.flowLayoutPanel.SuspendLayout();
             this.SuspendLayout();
-            // 
-            // flowLayoutPanel
-            // 
-            this.flowLayoutPanel.AutoScroll = true;
-            this.flowLayoutPanel.AutoSize = true;
-            this.flowLayoutPanel.Controls.Add(this.previewPanel);
-            this.flowLayoutPanel.Controls.Add(this.sinkPanel);
-            this.flowLayoutPanel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.flowLayoutPanel.Location = new System.Drawing.Point(0, 0);
-            this.flowLayoutPanel.Name = "flowLayoutPanel";
-            this.flowLayoutPanel.Size = new System.Drawing.Size(1082, 519);
-            this.flowLayoutPanel.TabIndex = 2;
-            // 
-            // previewPanel
-            // 
-            this.previewPanel.Location = new System.Drawing.Point(3, 3);
-            this.previewPanel.Name = "previewPanel";
-            this.previewPanel.Size = new System.Drawing.Size(512, 512);
-            this.previewPanel.TabIndex = 0;
-            this.previewPanel.Paint += new System.Windows.Forms.PaintEventHandler(this.previewPanel_Paint);
-            // 
-            // sinkPanel
-            // 
-            this.sinkPanel.Location = new System.Drawing.Point(521, 3);
-            this.sinkPanel.Name = "sinkPanel";
-            this.sinkPanel.Size = new System.Drawing.Size(512, 512);
-            this.sinkPanel.TabIndex = 1;
             // 
             // splitContainer1
             // 
@@ -99,6 +72,34 @@ namespace NodeThing
             this.displayTextureName.UseVisualStyleBackColor = true;
             this.displayTextureName.CheckedChanged += new System.EventHandler(this.displayTextureName_CheckedChanged);
             // 
+            // flowLayoutPanel
+            // 
+            this.flowLayoutPanel.AutoScroll = true;
+            this.flowLayoutPanel.AutoSize = true;
+            this.flowLayoutPanel.Controls.Add(this.previewPanel);
+            this.flowLayoutPanel.Controls.Add(this.sinkPanel);
+            this.flowLayoutPanel.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.flowLayoutPanel.Location = new System.Drawing.Point(0, 0);
+            this.flowLayoutPanel.Name = "flowLayoutPanel";
+            this.flowLayoutPanel.Size = new System.Drawing.Size(1082, 519);
+            this.flowLayoutPanel.TabIndex = 2;
+            // 
+            // previewPanel
+            // 
+            this.previewPanel.Location = new System.Drawing.Point(3, 3);
+            this.previewPanel.Name = "previewPanel";
+            this.previewPanel.Size = new System.Drawing.Size(512, 512);
+            this.previewPanel.TabIndex = 0;
+            this.previewPanel.Paint += new System.Windows.Forms.PaintEventHandler(this.previewPanel_Paint);
+            // 
+            // sinkPanel
+            // 
+            this.sinkPanel.Location = new System.Drawing.Point(521, 3);
+            this.sinkPanel.Name = "sinkPanel";
+            this.sinkPanel.Size = new System.Drawing.Size(512, 512);
+            this.sinkPanel.TabIndex = 1;
+            this.sinkPanel.Paint += new System.Windows.Forms.PaintEventHandler(this.sinkPanel_Paint);
+            // 
             // DisplayForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -109,13 +110,13 @@ namespace NodeThing
             this.MaximumSize = new System.Drawing.Size(1100, 1100);
             this.Name = "DisplayForm";
             this.Text = "DisplayForm";
-            this.flowLayoutPanel.ResumeLayout(false);
             this.splitContainer1.Panel1.ResumeLayout(false);
             this.splitContainer1.Panel1.PerformLayout();
             this.splitContainer1.Panel2.ResumeLayout(false);
             this.splitContainer1.Panel2.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
             this.splitContainer1.ResumeLayout(false);
+            this.flowLayoutPanel.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }

@@ -29,11 +29,11 @@
         {
             this.cWheel = new ColorWheel.CWheel();
             this.groupBox = new System.Windows.Forms.GroupBox();
-            this.label1 = new System.Windows.Forms.Label();
-            this.textBoxR = new System.Windows.Forms.TextBox();
-            this.textBoxG = new System.Windows.Forms.TextBox();
-            this.textBoxB = new System.Windows.Forms.TextBox();
             this.textBoxA = new System.Windows.Forms.TextBox();
+            this.textBoxB = new System.Windows.Forms.TextBox();
+            this.textBoxG = new System.Windows.Forms.TextBox();
+            this.textBoxR = new System.Windows.Forms.TextBox();
+            this.label1 = new System.Windows.Forms.Label();
             this.groupBox.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -69,30 +69,13 @@
             this.groupBox.TabStop = false;
             this.groupBox.Text = "groupBox1";
             // 
-            // label1
+            // textBoxA
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(9, 201);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(37, 13);
-            this.label1.TabIndex = 1;
-            this.label1.Text = "RGBA";
-            // 
-            // textBoxR
-            // 
-            this.textBoxR.Location = new System.Drawing.Point(52, 198);
-            this.textBoxR.Name = "textBoxR";
-            this.textBoxR.Size = new System.Drawing.Size(26, 20);
-            this.textBoxR.TabIndex = 5;
-            this.textBoxR.TextChanged += new System.EventHandler(this.textBoxR_TextChanged);
-            // 
-            // textBoxG
-            // 
-            this.textBoxG.Location = new System.Drawing.Point(82, 198);
-            this.textBoxG.Name = "textBoxG";
-            this.textBoxG.Size = new System.Drawing.Size(26, 20);
-            this.textBoxG.TabIndex = 6;
-            this.textBoxG.TextChanged += new System.EventHandler(this.textBoxG_TextChanged);
+            this.textBoxA.Location = new System.Drawing.Point(142, 198);
+            this.textBoxA.Name = "textBoxA";
+            this.textBoxA.Size = new System.Drawing.Size(26, 20);
+            this.textBoxA.TabIndex = 8;
+            this.textBoxA.TextChanged += new System.EventHandler(this.textBoxA_TextChanged);
             // 
             // textBoxB
             // 
@@ -102,13 +85,30 @@
             this.textBoxB.TabIndex = 7;
             this.textBoxB.TextChanged += new System.EventHandler(this.textBoxB_TextChanged);
             // 
-            // textBoxA
+            // textBoxG
             // 
-            this.textBoxA.Location = new System.Drawing.Point(142, 198);
-            this.textBoxA.Name = "textBoxA";
-            this.textBoxA.Size = new System.Drawing.Size(26, 20);
-            this.textBoxA.TabIndex = 8;
-            this.textBoxA.TextChanged += new System.EventHandler(this.textBoxA_TextChanged);
+            this.textBoxG.Location = new System.Drawing.Point(82, 198);
+            this.textBoxG.Name = "textBoxG";
+            this.textBoxG.Size = new System.Drawing.Size(26, 20);
+            this.textBoxG.TabIndex = 6;
+            this.textBoxG.TextChanged += new System.EventHandler(this.textBoxG_TextChanged);
+            // 
+            // textBoxR
+            // 
+            this.textBoxR.Location = new System.Drawing.Point(52, 198);
+            this.textBoxR.Name = "textBoxR";
+            this.textBoxR.Size = new System.Drawing.Size(26, 20);
+            this.textBoxR.TabIndex = 5;
+            this.textBoxR.TextChanged += new System.EventHandler(this.textBoxR_TextChanged);
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(9, 201);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(37, 13);
+            this.label1.TabIndex = 1;
+            this.label1.Text = "RGBA";
             // 
             // ColorEditor
             // 

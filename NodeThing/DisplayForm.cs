@@ -41,7 +41,6 @@ namespace NodeThing
         {
             InitializeComponent();
             _sinkPanels.Add(sinkPanel);
-            sinkPanel.Paint += sinkPanel_Paint;
         }
 
         public void BeginAddPanels()
@@ -49,16 +48,17 @@ namespace NodeThing
             _sinkCount = 0;
         }
 
-        public IntPtr GetPreviewHandle()
+        public IntPtr GetPreviewHandle(out IntPtr windowKey)
         {
             // Create a GDI bitmap to render to
             var bufferData = new BufferData { Name = "Preview", Panel = previewPanel };
             var handle = new Bitmap(512, 512, PixelFormat.Format24bppRgb).GetHbitmap();
             _bufferData[handle] = bufferData;
+            windowKey = bufferData.Panel.Handle;
             return handle;
         }
 
-        public IntPtr GetSinkHandle(string name)
+        public IntPtr GetSinkHandle(string name, out IntPtr windowKey)
         {
             // Check if we need to create a new sink handle
             if (++_sinkCount > _sinkPanels.Count) {
@@ -74,13 +74,14 @@ namespace NodeThing
             var bufferData = new BufferData { Name = name, Panel = panel };
             var handle = new Bitmap(512, 512, PixelFormat.Format24bppRgb).GetHbitmap();
             _bufferData[handle] = bufferData;
+            windowKey = bufferData.Panel.Handle;
             return handle;
         }
 
         public void EndAddPanels()
         {
             // Remove any superflous panels
-            if (_sinkPanels.Count > _sinkCount) {
+            if (_sinkCount > 0 && _sinkPanels.Count > _sinkCount) {
                 for (int i = _sinkCount; i < _sinkPanels.Count; ++i) {
                     var panel = _sinkPanels[i];
                     flowLayoutPanel.Controls.Remove(panel);
@@ -117,7 +118,7 @@ namespace NodeThing
             BackingData data;
             var panel = (Panel)sender;
             if (_backingBitmap.TryGetValue(panel, out data)) {
-                e.Graphics.DrawImage(data.Bitmap, panel.Bounds);
+                e.Graphics.DrawImage(data.Bitmap, 0, 0);
 
                 if (displayTextureName.Checked) {
                     e.Graphics.DrawString(data.Name, _font, Brushes.White, 0, 0);
@@ -131,7 +132,7 @@ namespace NodeThing
             BackingData data;
             var panel = (Panel)sender;
             if (_backingBitmap.TryGetValue(panel, out data)) {
-                e.Graphics.DrawImage(data.Bitmap, panel.Bounds);
+                e.Graphics.DrawImage(data.Bitmap, 0, 0);
 
                 if (displayTextureName.Checked) {
                     e.Graphics.DrawString(data.Name, _font, Brushes.White, 0, 0);

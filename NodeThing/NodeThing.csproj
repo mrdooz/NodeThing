@@ -47,6 +47,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BooleanEditor.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="BooleanEditor.Designer.cs">
+      <DependentUpon>BooleanEditor.cs</DependentUpon>
+    </Compile>
     <Compile Include="ColorEditor.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -95,6 +101,9 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="TextureFactory.cs" />
+    <EmbeddedResource Include="BooleanEditor.resx">
+      <DependentUpon>BooleanEditor.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="ColorEditor.resx">
       <DependentUpon>ColorEditor.cs</DependentUpon>
     </EmbeddedResource>

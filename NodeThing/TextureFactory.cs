@@ -16,7 +16,7 @@ namespace NodeThing
         private static extern bool closeTextureLib();
 
         [DllImport("TextureLib.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
-        private static extern void renderTexture(IntPtr hwnd, int width, int height, int numTextures, int finalTexture, 
+        private static extern void renderTexture(IntPtr hwnd, IntPtr key, int width, int height, int numTextures, int finalTexture, 
             [MarshalAs(UnmanagedType.LPStr)] String name, int opCodeLen, byte[] opCodes);
 
 
@@ -104,7 +104,7 @@ namespace NodeThing
             if (name == "Plasma") {
                 node.SetOutput("Output", Connection.Type.Texture);
                 node.AddProperty("Scale", 1.0f, 0.0f, 5.0f);
-                node.AddProperty("Monochrome", 0, 0, 1);
+                node.AddProperty("Monochrome", true);
                 node.AddProperty("Start octave", 1, 1, 9);
                 node.AddProperty("End octave", 4, 1, 9);
                 node.AddProperty("Seed", rnd.Next());
@@ -234,7 +234,8 @@ namespace NodeThing
                 //pp.AddPushUInt32(Math.Min(startOctave, endOctave));
                 pp.AddPushUInt32((UInt32)endOctave);
                 pp.AddPushUInt32((UInt32)startOctave);
-                pp.AddPushUInt32((UInt32)node.GetProperty<int>("Monochrome"));
+                var monochrome = node.GetProperty<bool>("Monochrome");
+                pp.AddPushUInt32(monochrome ? 1U : 0U);
                 pp.AddPushFloat32(node.GetProperty<float>("Scale"));
                 pp.AddPushUInt32((UInt32)dstTexture);
             }
@@ -265,14 +266,14 @@ namespace NodeThing
             return opCodes;
         }
 
-        public override void DisplaySequence(GeneratorSequence seq, IntPtr displayHandle)
+        public override void DisplaySequence(GeneratorSequence seq, IntPtr displayHandle, IntPtr key)
         {
             var opCodes = SequenceToOpCodes(seq);
             if (opCodes.Count == 0)
                 return;
 
             var finalTexture = seq.Sequence.Last().DstTextureIdx;
-            renderTexture(displayHandle, seq.Size.Width, seq.Size.Height, seq.NumTextures, finalTexture, seq.Name, opCodes.Count, opCodes.ToArray());
+            renderTexture(displayHandle, key, seq.Size.Width, seq.Size.Height, seq.NumTextures, finalTexture, seq.Name, opCodes.Count, opCodes.ToArray());
         }
 
         public override void GenerateCode(GeneratorSequence seq, string filename)

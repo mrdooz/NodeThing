@@ -297,7 +297,7 @@ extern "C" {
     fclose(f);
   }
 
-  __declspec(dllexport) void renderTexture(HANDLE handle, int width, int height, int numTextures, int finalTexture, const char *name, int opCodeLen, const uint8 *opCodes) {
+  __declspec(dllexport) void renderTexture(HANDLE handle, HANDLE key, int width, int height, int numTextures, int finalTexture, const char *name, int opCodeLen, const uint8 *opCodes) {
 
     auto rd = new RenderData;
     rd->handle = handle;
@@ -309,7 +309,7 @@ extern "C" {
     patchOpCodes(opCodeLen, opCodes, &rd->opCodes);
 
     EnterCriticalSection(&gRenderCs);
-    gRenderQueue[handle].push_back(rd);
+    gRenderQueue[key].push_back(rd);
     LeaveCriticalSection(&gRenderCs);
 
     SetEvent(gNewDataEvent);

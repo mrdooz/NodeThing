@@ -27,28 +27,29 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.drawPanel = new NodeThing.DoublBufferedPanel();
+            this.drawPanel1 = new NodeThing.DoublBufferedPanel();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.textBox2 = new System.Windows.Forms.TextBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.useBounds = new System.Windows.Forms.CheckBox();
+            this.drawPanel2 = new NodeThing.DoublBufferedPanel();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
-            // drawPanel
+            // drawPanel1
             // 
-            this.drawPanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.drawPanel.Location = new System.Drawing.Point(64, 16);
-            this.drawPanel.Name = "drawPanel";
-            this.drawPanel.Size = new System.Drawing.Size(100, 100);
-            this.drawPanel.TabIndex = 0;
-            this.drawPanel.Paint += new System.Windows.Forms.PaintEventHandler(this.drawPanel_Paint);
-            this.drawPanel.MouseDown += new System.Windows.Forms.MouseEventHandler(this.drawPanel_MouseDown);
-            this.drawPanel.MouseMove += new System.Windows.Forms.MouseEventHandler(this.drawPanel_MouseMove);
+            this.drawPanel1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.drawPanel1.Location = new System.Drawing.Point(64, 19);
+            this.drawPanel1.Name = "drawPanel1";
+            this.drawPanel1.Size = new System.Drawing.Size(100, 20);
+            this.drawPanel1.TabIndex = 0;
+            this.drawPanel1.Paint += new System.Windows.Forms.PaintEventHandler(this.drawPanel_Paint);
+            this.drawPanel1.MouseDown += new System.Windows.Forms.MouseEventHandler(this.drawPanel_MouseDown);
+            this.drawPanel1.MouseMove += new System.Windows.Forms.MouseEventHandler(this.drawPanel_MouseMove);
             // 
             // textBox1
             // 
             this.textBox1.Location = new System.Drawing.Point(6, 19);
+            this.textBox1.Margin = new System.Windows.Forms.Padding(0);
             this.textBox1.Name = "textBox1";
             this.textBox1.Size = new System.Drawing.Size(50, 20);
             this.textBox1.TabIndex = 1;
@@ -64,44 +65,41 @@
             // 
             // groupBox1
             // 
-            this.groupBox1.AutoSize = true;
-            this.groupBox1.Controls.Add(this.useBounds);
-            this.groupBox1.Controls.Add(this.drawPanel);
+            this.groupBox1.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.groupBox1.Controls.Add(this.drawPanel2);
+            this.groupBox1.Controls.Add(this.drawPanel1);
             this.groupBox1.Controls.Add(this.textBox1);
             this.groupBox1.Controls.Add(this.textBox2);
-            this.groupBox1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.groupBox1.Location = new System.Drawing.Point(0, 0);
+            this.groupBox1.Margin = new System.Windows.Forms.Padding(0);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Size = new System.Drawing.Size(170, 158);
+            this.groupBox1.Padding = new System.Windows.Forms.Padding(0);
+            this.groupBox1.Size = new System.Drawing.Size(180, 75);
             this.groupBox1.TabIndex = 3;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "groupBox1";
             // 
-            // useBounds
+            // drawPanel2
             // 
-            this.useBounds.AutoSize = true;
-            this.useBounds.Checked = true;
-            this.useBounds.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.useBounds.Location = new System.Drawing.Point(81, 122);
-            this.useBounds.Name = "useBounds";
-            this.useBounds.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
-            this.useBounds.Size = new System.Drawing.Size(83, 17);
-            this.useBounds.TabIndex = 4;
-            this.useBounds.Text = "Use bounds";
-            this.useBounds.UseVisualStyleBackColor = true;
+            this.drawPanel2.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.drawPanel2.Location = new System.Drawing.Point(64, 42);
+            this.drawPanel2.Name = "drawPanel2";
+            this.drawPanel2.Size = new System.Drawing.Size(100, 20);
+            this.drawPanel2.TabIndex = 1;
+            this.drawPanel2.Paint += new System.Windows.Forms.PaintEventHandler(this.drawPanel_Paint);
+            this.drawPanel2.MouseDown += new System.Windows.Forms.MouseEventHandler(this.drawPanel_MouseDown);
+            this.drawPanel2.MouseMove += new System.Windows.Forms.MouseEventHandler(this.drawPanel_MouseMove);
             // 
             // ValueEditor2d
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.AutoSize = true;
             this.Controls.Add(this.groupBox1);
             this.Name = "ValueEditor2d";
-            this.Size = new System.Drawing.Size(170, 158);
+            this.Size = new System.Drawing.Size(180, 75);
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
             this.ResumeLayout(false);
-            this.PerformLayout();
 
         }
 
@@ -109,8 +107,8 @@
 
         private System.Windows.Forms.TextBox textBox1;
         private System.Windows.Forms.TextBox textBox2;
-        private DoublBufferedPanel drawPanel;
+        private DoublBufferedPanel drawPanel1;
         private System.Windows.Forms.GroupBox groupBox1;
-        private System.Windows.Forms.CheckBox useBounds;
+        private DoublBufferedPanel drawPanel2;
     }
 }
