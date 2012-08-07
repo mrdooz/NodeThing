@@ -179,7 +179,7 @@ void midpoint_displacement(float *src, PlasmaSettings *settings, int depth, floa
   }
 }
 
-void source_plasma(int dstTexture, float scale, int monochrome, int startOctave, int endOctave, int seed) {
+void source_plasma(int dstTexture, float scale, int monochrome, int depth, int seed) {
   Texture *texture = gTextures[dstTexture];
   int tmpSeed = gRandomSeed;
   gRandomSeed = seed;
@@ -191,7 +191,7 @@ void source_plasma(int dstTexture, float scale, int monochrome, int startOctave,
     texture->data[i] = 0;
   }
 
-  int gridSize = cGridSize[startOctave];
+  int gridSize = cGridSize[depth];
 
   ASSERT((width % (gridSize - 1)) == 0);
   ASSERT((height % (gridSize - 1)) == 0);
@@ -226,12 +226,12 @@ void source_plasma(int dstTexture, float scale, int monochrome, int startOctave,
   for (int i = 0, yCur = 0; i < height; ++i, yCur += yStep) {
 
     float fracY = (yCur & 0xffff) / 65536.0f;
-    fracY = cos_interpolate(fracY);
+    fracY = interpolate(fracY);
 
     for (int j = 0, xCur = 0; j  < width; ++j, xCur += xStep) {
 
       float fracX = (xCur & 0xffff) / 65536.0f;
-      fracX = cos_interpolate(fracX);
+      fracX = interpolate(fracX);
 
       float *tmp = &corners[4*((xCur >> 16) + (yCur >> 16) * gridSize)];
       for (int k = 0; k < 4; ++k)

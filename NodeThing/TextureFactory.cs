@@ -76,7 +76,7 @@ namespace NodeThing
                 node.AddProperty("Amount", 10, 1, 40);
                 node.AddProperty("Size", 0.1f, 0.001f, 1.0f);
                 node.AddProperty("Variance", 1.0f, 0.0f, 2.0f);
-                node.AddProperty("Fade", 0.0f, 0.0f, 0.5f);
+                node.AddProperty("Fade", 0.05f, 0.0f, 0.5f);
                 node.AddProperty("Inner color", Color.FromArgb(255, 190, 190, 190));
                 node.AddProperty("Outer color", Color.FromArgb(255, 90, 90, 90));
                 node.AddProperty("Seed", rnd.Next());
@@ -105,8 +105,7 @@ namespace NodeThing
                 node.SetOutput("Output", Connection.Type.Texture);
                 node.AddProperty("Scale", 1.0f, 0.0f, 5.0f);
                 node.AddProperty("Monochrome", true);
-                node.AddProperty("Start octave", 1, 1, 9);
-                node.AddProperty("End octave", 4, 1, 9);
+                node.AddProperty("Depth", 7, 1, 9);
                 node.AddProperty("Seed", rnd.Next());
             }
 
@@ -225,15 +224,10 @@ namespace NodeThing
             }
 
             if (name == "Plasma") {
-                // void source_plasma(int dstTexture, float scale, int monochrome, int startOctave, int endOctave, randomSeed);
+                // void source_plasma(int dstTexture, float scale, int monochrome, int depth, randomSeed);
 
                 pp.AddPushUInt32((UInt32)node.GetProperty<int>("Seed"));
-                var startOctave = node.GetProperty<int>("Start octave");
-                var endOctave = node.GetProperty<int>("End octave");
-                //pp.AddPushUInt32(Math.Max(startOctave, endOctave));
-                //pp.AddPushUInt32(Math.Min(startOctave, endOctave));
-                pp.AddPushUInt32((UInt32)endOctave);
-                pp.AddPushUInt32((UInt32)startOctave);
+                pp.AddPushUInt32((UInt32)node.GetProperty<int>("Depth"));
                 var monochrome = node.GetProperty<bool>("Monochrome");
                 pp.AddPushUInt32(monochrome ? 1U : 0U);
                 pp.AddPushFloat32(node.GetProperty<float>("Scale"));

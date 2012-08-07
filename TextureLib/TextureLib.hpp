@@ -66,7 +66,7 @@ void source_noise(int dstTexture, float scaleX, float scaleY, float offsetX, flo
 void source_circles(int dstTexture, int amount, float size, float variance, float fade, uint32 innerColor_argb, uint32 outerColor_argb, uint32 seed);
 void source_random(int dstTexture, float scale, uint32 seed);
 void source_sinwaves(int dstTexture, float scale, int numSin, int func, float startAmp, float endAmp, float startPhase, float endPhase, float startFreq, float endFreq);
-void source_plasma(int dstTexture, float scale, int monochrome, int startOctave, int endOctave, int seed);
+void source_plasma(int dstTexture, float scale, int monochrome, int depth, int seed);
 
 void modifier_add(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2);
 void modifier_sub(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2);
