@@ -1,0 +1,9 @@
+NodeThing
+=========
+
+
+Playing around with procedural texture generation, and trying (and failing) at size-coding.  
+
+* NodeThing contains my C# GUI.  
+* TextureLib are my texture creation routines (all DLL that NodeThing calls)  
+* TextureRunner creates a small exe with textures/shaders embedded.  
