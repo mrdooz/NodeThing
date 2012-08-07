@@ -7,7 +7,12 @@
 #include <math.h>
 #include <xmmintrin.h>
 
+static const float cPI = 3.1415926f;
 static uint8 shiftAmount[] = {24, 16, 8, 0};
+
+static uint8 shiftAmount_argb_to_rgba[] = {16, 8, 0, 24};
+
+#define ELEMS_IN_ARRAY(x) sizeof(x) / sizeof((x)[0])
 
 Texture **gTextures;
 
@@ -43,31 +48,36 @@ float dot(const Vector2 &a, const Vector2 &b) {
 
 #define RAND_MAX_32 ((1U << 31) - 1)
 
-int randomSeed = 0x12345;
+int gRandomSeed = 0x12345;
 int tRand() {
-  return (randomSeed = (randomSeed * 214013 + 2531011) & RAND_MAX_32) >> 16;
+  return (gRandomSeed = (gRandomSeed * 214013 + 2531011) & RAND_MAX_32) >> 16;
 }
 
-double tGaussianRand(double mean, double variance) {
+float tGaussianRand(float mean, float variance) {
   // Generate a gaussian from the sum of uniformly distributed random numbers
   // (Central Limit Theorem)
   double sum = 0;
   for (int i = 0; i < 100; ++i) {
     sum += randf(-variance, variance);
   }
-  return mean + sum / 100;
+  return (float)(mean + sum / 100);
 }
 
 float interpolate(float t) {
+  // 6*t^5-15*t^4+10*t^3
   return t*t*t*(t*(t*6-15)+10);
+}
+
+float cos_interpolate(float t) {
+  return 1.0f - cosf(t*cPI/2);
 }
 
 float bilinear(float *src, int width, int stride, float tx, float ty) {
 
   // sample corners
   float c00 = src[0];
-  float c10 = src[stride*width];
   float c01 = src[stride];
+  float c10 = src[stride*width];
   float c11 = src[stride*(width+1)];
 
   float v0 = lerp(c00, c01, tx);
@@ -84,13 +94,13 @@ enum BlendFunc {
   kBlendMax
 };
 
-void source_solid(int dstTexture, uint32 color) {
+void source_solid(int dstTexture, uint32 color_argb) {
 
   const Texture *texture = gTextures[dstTexture];
   float *p = (float *)texture->data;
   float rgba[4];
   for (int i = 0; i < 4; ++i)
-    rgba[i] = ((color >> shiftAmount[i]) & 0xff)/ 255.0f;
+    rgba[i] = ((color_argb >> shiftAmount_argb_to_rgba[i]) & 0xff)/ 255.0f;
 
   __m128 col = _mm_load_ps(rgba);
   int len = texture->width * texture->height;
@@ -106,8 +116,8 @@ void source_random(int dstTexture, float scale, uint32 seed) {
   const Texture *texture = gTextures[dstTexture];
   float *p = (float *)texture->data;
 
-  int tmpSeed = randomSeed;
-  randomSeed = seed;
+  int tmpSeed = gRandomSeed;
+  gRandomSeed = seed;
 
   int len = texture->width * texture->height;
   for (int i = 0; i < len; ++i) {
@@ -116,17 +126,63 @@ void source_random(int dstTexture, float scale, uint32 seed) {
     p += 4;
   }
 
-  randomSeed = tmpSeed;
+  gRandomSeed = tmpSeed;
 }
 
-static const int cMaxCorners = 65;
-static const int cNumCorners[] = {0, 2, 3, 5, 9, 17, 33, 65};
-static float corners[4*cMaxCorners*cMaxCorners];
+static const int cGridSize[] = {0, (1<<1)+1, (1<<2)+1, (1<<3)+1, (1<<4)+1, (1<<5)+1, (1<<6)+1, (1<<7)+1, (1<<8)+1, (1<<9)+1};
+static float corners[4*513*513];
+
+struct PlasmaSettings {
+  int pitch;
+  int stride;
+  int orgSize;
+  int orgLogical;
+  float roughness;
+};
+
+void midpoint_displacement(float *src, PlasmaSettings *settings, int depth, float p00, float p01, float p10, float p11) {
+
+  // p00---top---p01
+  //  |  0  |  1  |
+  // lft---mid---rgt
+  //  |  2  |  3  |
+  // p10---btm---p11
+
+  int pitch = settings->pitch;
+  int stride = settings->stride;
+  int size = settings->orgSize / (1 << depth);
+  int logicalSize = settings->orgLogical / (1 << depth);
+  float roughness = settings->roughness;
+
+  float top = (p00 + p01) / 2;
+  float left = (p00 + p10) / 2;
+  float right = (p01 + p11) / 2;
+  float bottom = (p10 + p11) / 2;
+
+  float middle = (p00 + p01 + p10 + p11) / 4 + logicalSize / 512.0f * randf(-roughness/2, 0.75f*roughness);
+
+  src[stride*size/2] = top;
+  src[pitch*size + stride*size/2] = bottom;
+
+  src[pitch*size/2] = left;
+  src[pitch*size/2 + stride*size] = right;
+
+  src[pitch*size/2 + stride*size/2] = middle;
+
+  if (size > 2) {
+    int s2 = size / 2;
+    int l2 = logicalSize / 2;
+    midpoint_displacement(src, settings, depth + 1, p00, top, left, middle);
+    midpoint_displacement(src + stride*size/2, settings, depth + 1, top, p01, middle, right);
+    midpoint_displacement(src + pitch*size/2, settings, depth + 1, left, middle, p10, bottom);
+    midpoint_displacement(src + pitch*size/2 + stride*size/2, settings, depth + 1, middle, right, bottom, p11);
+  }
+}
 
 void source_plasma(int dstTexture, float scale, int monochrome, int startOctave, int endOctave, int seed) {
   Texture *texture = gTextures[dstTexture];
-  int tmpSeed = randomSeed;
-  randomSeed = seed;
+  int tmpSeed = gRandomSeed;
+  gRandomSeed = seed;
 
   int height = texture->height;
   int width = texture->width;
@@ -135,46 +191,54 @@ void source_plasma(int dstTexture, float scale, int monochrome, int startOctave,
     texture->data[i] = 0;
   }
 
-  for (int octave = startOctave; octave <= endOctave; ++octave) {
+  int gridSize = cGridSize[startOctave];
 
-    int numCorners = cNumCorners[octave];
+  ASSERT((width % (gridSize - 1)) == 0);
+  ASSERT((height % (gridSize - 1)) == 0);
 
-    int dx = width / (numCorners - 1);
-    int dy = height / (numCorners - 1);
-
-    ASSERT((width % (numCorners - 1)) == 0);
-    ASSERT((height % (numCorners - 1)) == 0);
-
-    for (int i = 0; i < numCorners*numCorners; ++i) {
-      if (monochrome) {
-        float v = randf(0.0f, 1.0f);
-        for (int j = 0; j < 4; ++j)
-          corners[i*4+j] = v;
-      } else {
-        for (int j = 0; j < 4; ++j)
-          corners[i*4+j] = randf(0.0f, 1.0f);
-      }
-    }
-
-    float *p = texture->data;
-
-    for (int i = 0; i < height; ++i) {
-      for (int j = 0; j  < width; ++j) {
-
-        float ttx = (float)j/dx - j/dx;
-        float tx = interpolate(ttx);
-
-        float tty = (float)i/dy - i/dy;
-        float ty = interpolate(tty);
-
-        float *tmp = &corners[4*(j/dx+0+(i/dy+0)*numCorners)];
-        for (int k = 0; k < 4; ++k)
-          *p++ = bilinear(tmp+k, numCorners, 4, tx, ty);
-      }
-    }
+  int g = gridSize - 1;
+  int seedTmp2 = gRandomSeed;
+  PlasmaSettings settings;
+  settings.orgLogical = width;
+  settings.orgSize = g;
+  settings.pitch = 4 * gridSize;
+  settings.stride = 4;
+  settings.roughness = scale;
+  for (int k = 0; k < 4; ++k) {
+    if (monochrome)
+      gRandomSeed = seedTmp2;
+    float v = randf(0.0f, 0.3f);
+    float v00 = corners[k] = v;
+    float v01 = corners[4*g+k] = v;
+    float v10 = corners[4*(gridSize*g)+k] = v;
+    float v11 = corners[4*(gridSize*g+g)+k] = v;
+    midpoint_displacement(corners+k, &settings, 0, v00, v01, v10, v11);
   }
 
-  randomSeed = tmpSeed;
+  if (monochrome)
+    gRandomSeed = seedTmp2;
+
+  float *p = texture->data;
+
+  int yStep = ((gridSize - 1) << 16) / height;
+  int xStep = ((gridSize - 1) << 16) / width;
+
+  for (int i = 0, yCur = 0; i < height; ++i, yCur += yStep) {
+
+    float fracY = (yCur & 0xffff) / 65536.0f;
+    fracY = cos_interpolate(fracY);
+
+    for (int j = 0, xCur = 0; j  < width; ++j, xCur += xStep) {
+
+      float fracX = (xCur & 0xffff) / 65536.0f;
+      fracX = cos_interpolate(fracX);
+
+      float *tmp = &corners[4*((xCur >> 16) + (yCur >> 16) * gridSize)];
+      for (int k = 0; k < 4; ++k)
+        *p++ = bilinear(tmp+k, gridSize, 4, fracX, fracY);
+    }
+  }
+  gRandomSeed = tmpSeed;
 }
 
 enum SinFunc {
@@ -331,12 +395,12 @@ struct Circle {
 static const int cMaxCircles = 256;
 static Circle circles[cMaxCircles];
 
-void source_circles(int dstTexture, int amount, float size, float variance, float fade, uint32 innerColor, uint32 outerColor, uint32 seed) {
+void source_circles(int dstTexture, int amount, float size, float variance, float fade, uint32 innerColor_argb, uint32 outerColor_argb, uint32 seed) {
 
   amount = min(cMaxCircles, amount);
 
-  int seedTmp = randomSeed;
-  randomSeed = seed;
+  int seedTmp = gRandomSeed;
+  gRandomSeed = seed;
   for (int i = 0; i < amount; ++i) {
     circles[i].x = randf(0.0f, 1.0f);
     circles[i].y = randf(0.0f, 1.0f);
@@ -344,7 +408,7 @@ void source_circles(int dstTexture, int amount, float size, float variance, floa
     s = size + s;
     circles[i].radius = s;
   }
-  randomSeed = seedTmp;
+  gRandomSeed = seedTmp;
   
   Texture *texture = gTextures[dstTexture];
   float *p = (float *)texture->data;
@@ -355,8 +419,8 @@ void source_circles(int dstTexture, int amount, float size, float variance, floa
   float inner[4], outer[4];
 
   for (int i = 0; i < 4; ++i) {
-    inner[i] = ((innerColor >> shiftAmount[i]) & 0xff)/ 255.0f;
-    outer[i] = ((outerColor >> shiftAmount[i]) & 0xff)/ 255.0f;
+    inner[i] = ((innerColor_argb >> shiftAmount_argb_to_rgba[i]) & 0xff)/ 255.0f;
+    outer[i] = ((outerColor_argb >> shiftAmount_argb_to_rgba[i]) & 0xff)/ 255.0f;
   }
 
   __m128 innerCol = _mm_loadu_ps(inner);
