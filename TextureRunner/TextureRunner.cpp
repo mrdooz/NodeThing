@@ -157,6 +157,7 @@ void createTexture(const void *raw, int len, IDirect3DTexture9 **texture) {
     // Use VirtualAlloc to guarantee 16 byte alignment (actually page alignment)
     int size = 4*header->width*header->height*sizeof(float);
     texture->data = (float *)VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    texture->scratch = (float *)VirtualAlloc(NULL, 3*max(header->height, header->width)*4*sizeof(float), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     texture->width = header->width;
     texture->height = header->height;
     gTextures[i] = texture;
@@ -180,6 +181,7 @@ void createTexture(const void *raw, int len, IDirect3DTexture9 **texture) {
 
   for (int i = 0; i < header->numTextures; ++i) {
     VirtualFree(gTextures[i]->data, 0, MEM_RELEASE);
+    VirtualFree(gTextures[i]->scratch, 0, MEM_RELEASE);
     tFree(gTextures[i]);
   }
 

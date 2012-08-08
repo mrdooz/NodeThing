@@ -44,6 +44,8 @@ namespace NodeThing
             AddNodeName("Plasma", 10);
 
             AddNodeName("Distort", 11);
+
+            AddNodeName("Blur", 12);
         }
 
         public override Node CreateNode(string name, Point pos)
@@ -126,6 +128,14 @@ namespace NodeThing
                 node.AddProperty("Channels", 0, 0, 3);
             }
 
+            if (name == "Blur") {
+                node.AddInput("Source", Connection.Type.Texture);
+                node.SetOutput("Output", Connection.Type.Texture);
+                node.AddProperty("Radius", 25.0f, 1.0f, 100.0f);
+                node.AddProperty("Direction", 2, 0, 2);
+                node.AddProperty("Texture mode", 0, 0, 2);
+            }
+
             return node;
         }
 
@@ -183,9 +193,22 @@ namespace NodeThing
                 pp.AddPushUInt32((UInt32)node.GetProperty<int>("Channels"));
                 pp.AddPushFloat32(node.GetProperty<float>("Scale"));
                 pp.AddPushUInt32((UInt32)srcTexture1);
+                pp.AddPushUInt32((UInt32)srcTexture2);
+                pp.AddPushUInt32((UInt32)dstTexture);
+            }
+
+            if (name == "Blur") {
+                // void modifier_blur(int dstTextureIdx, int srcTextureIdx, float radius, TextureMode mode, BlurDirection dir)
+                if (step.InputTextures.Count != 1)
+                    return false;
+
+                var srcTexture1 = step.InputTextures[0];
+                pp.AddPushUInt32((UInt32)node.GetProperty<int>("Direction"));
+                pp.AddPushUInt32((UInt32)node.GetProperty<int>("Texture mode"));
+                pp.AddPushFloat32(node.GetProperty<float>("Radius"));
                 pp.AddPushUInt32((UInt32)srcTexture1);
                 pp.AddPushUInt32((UInt32)dstTexture);
-
+    
             }
 
             if (name == "Circles")

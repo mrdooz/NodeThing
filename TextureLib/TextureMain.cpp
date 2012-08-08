@@ -36,6 +36,7 @@ static void *funcPtrs[] = {
   &source_sinwaves,
   &source_plasma,
   &modifier_map_distort,
+  &modifier_blur,
 };
 
 struct RenderData {
@@ -153,6 +154,7 @@ DWORD WINAPI renderThread(void *param) {
     for (int i = 0; i < data->numTextures; ++i) {
       Texture *texture = new Texture();
       texture->data = new float[4*data->width*data->height];
+      texture->scratch = new float[4*max(data->height, data->width)*3];
       texture->width = data->width;
       texture->height = data->height;
       gTextures[i] = texture;
@@ -173,6 +175,7 @@ DWORD WINAPI renderThread(void *param) {
 
     for (int i = 0; i < data->numTextures; ++i) {
       delete [] gTextures[i]->data;
+      delete [] gTextures[i]->scratch;
       delete gTextures[i];
     }
 

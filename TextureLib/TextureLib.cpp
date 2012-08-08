@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <xmmintrin.h>
+#include <d3dx9math.h>
 
 static const float cPI = 3.1415926f;
 static uint8 shiftAmount[] = {24, 16, 8, 0};
@@ -650,5 +651,101 @@ void __cdecl modifier_map_distort(int dstTextureIdx, int srcTextureIdx, int dist
       distort += 4;
 
    }
+  }
+}
+
+void prepare_scratch_buffer(Texture *texture, int scanLine, bool horizontal, TextureMode mode) {
+
+  int w = texture->width;
+  int h = texture->height;
+
+  int size = horizontal ? w : h;
+  int step = horizontal ? 4 : w * 4;
+  int pitch = horizontal ? w * 4 : 4;
+
+  float *src = texture->data + scanLine * pitch; // first pixel in scan line
+  float *dst = texture->scratch;
+
+  // left side
+  int start = mode == kTextureMirror ? step * (size - 1) : 0;
+  int delta = mode == kTextureClamp ? 0 : mode == kTextureWrap ? 1 * step : -1 * step;
+
+  src += start;
+
+  for (int i = 0; i < size; ++i, src += delta, dst += 4) {
+    memcpy(dst, src, 16);
+  }
+
+  // middle
+  src = texture->data + scanLine * pitch;
+  for (int i = 0; i < size; ++i, src += step, dst += 4) {
+    memcpy(dst, src, 16);
+  }
+  
+  // right
+  start = mode == kTextureWrap ? 0 : step * (size - 1);
+  delta = mode == kTextureClamp ? 0 : mode == kTextureWrap ? 1 * step : -1 * step;
+
+  src = texture->data + scanLine * pitch;
+  src += start;
+
+  for (int i = 0; i < size; ++i, src += delta, dst += 4) {
+    memcpy(dst, src, 16);
+  }
+}
+
+void __cdecl modifier_blur(int dstTextureIdx, int srcTextureIdx, float blurRadius, TextureMode mode, BlurDirection dir) {
+
+  Texture *dstTexture = gTextures[dstTextureIdx];
+  float *dst = dstTexture->data;
+
+  Texture *srcTexture = gTextures[srcTextureIdx];
+
+  int height = dstTexture->height;
+  int width = dstTexture->width;
+
+  float scale = 1.0f / (2 * blurRadius + 1);
+  int m = (int)blurRadius;          // integer part of radius
+  float alpha = blurRadius - m;     // fractional part
+
+  bool horizontal = dir == kBlurHoriz;
+
+  const int numPasses = 3;
+
+  Texture *inputTexture = srcTexture;
+
+  // todo, move the pass loop to the horizontal step
+  for (int pass = 0; pass < numPasses; ++pass) {
+
+    for (int outer = 0; outer < (dir == kBlurBoth ? 2 : 1); ++outer) {
+
+      for (int i = 0; i < height; ++i) {
+
+        prepare_scratch_buffer(inputTexture, i, horizontal, kTextureClamp);
+        float *scratch = inputTexture->scratch;
+
+        D3DXVECTOR4 *x = (D3DXVECTOR4 *)(scratch + width * 4);
+        D3DXVECTOR4 *y = (D3DXVECTOR4 *)(horizontal ? &dst[i*width*4] : &dst[i*4]);
+
+        // compute sum at first pixel
+        D3DXVECTOR4 sum = x[0];
+        for (int j = 1; j <= m; ++j)
+          sum += x[-j] + x[j];
+        sum += alpha * (x[-m-1] + x[m+1]);
+
+        for (int j = 0; j  < width; ++j) {
+
+          // generate output pixel, and update running sum for next pixel
+          *y = sum * scale;
+
+          sum += lerp(x[j+m+1], x[j+m+2], alpha);
+          sum -= lerp(x[j-m], x[j-m-1], alpha);
+          y += horizontal ? 1 : width;
+        }
+      }
+
+      horizontal = !horizontal;
+      inputTexture = inputTexture == srcTexture ? dstTexture : srcTexture;
+    }
   }
 }

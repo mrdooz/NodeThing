@@ -15,19 +15,14 @@ typedef uint8_t uint8;
 #endif
 
 struct Texture {
-  float *data;  // RGBA
+  float *data;    // RGBA
+  float *scratch; // enough space to hold 3*width pixels, to avoid having to do clamping operations
   int width;
   int height;
 };
 
 extern Texture **gTextures;
-/*
-struct Vector3 {
-  Vector3() {}
-  Vector3(float x, float y, float z) : x(x), y(y), z(z) {}
-  float x, y, z;
-};
-*/
+
 struct Vector2 {
   Vector2() {}
   Vector2(float x, float y) : x(x), y(y) {}
@@ -63,6 +58,19 @@ static const int cNumGradients = 16;
 extern int gPerm[512];
 extern Vector2 gGrad[cNumGradients];
 
+
+enum TextureMode {
+  kTextureClamp,
+  kTextureWrap,
+  kTextureMirror,
+};
+
+enum BlurDirection {
+  kBlurHoriz,
+  kBlurVert,
+  kBlurBoth,
+};
+
 void __cdecl source_solid(int dstTexture, uint32 color_argb);
 void __cdecl source_noise(int dstTexture, float scaleX, float scaleY, float offsetX, float offsetY);
 void __cdecl source_circles(int dstTexture, int amount, float size, float variance, float fade, uint32 innerColor_argb, uint32 outerColor_argb, uint32 seed);
@@ -78,4 +86,5 @@ void __cdecl modifier_mul(int dstTextureIdx, int srcTexture1Idx, float blend1, i
 void __cdecl modifier_invert(int dstTextureIdx, int srcTextureIdx);
 void __cdecl modifier_grayscale(int dstTextureIdx, int srcTextureIdx);
 void __cdecl modifier_map_distort(int dstTextureIdx, int srcTextureIdx, int distortTextureIdx, float scale, int channels);
+void __cdecl modifier_blur(int dstTextureIdx, int srcTextureIdx, float blurRadius, TextureMode mode, BlurDirection dir);
 
