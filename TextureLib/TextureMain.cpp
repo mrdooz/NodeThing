@@ -7,6 +7,7 @@
 #include <vector>
 #include <deque>
 #include <map>
+
 #include "TextureLib.hpp"
 
 using namespace std;
@@ -26,15 +27,15 @@ fnCompletedCallback gCompletedCallback;
 static void *funcPtrs[] = {
   &source_solid,
   &source_noise,
+  &source_circles,
+  &source_random,
+  &source_sinwaves,
+  &source_plasma,
   &modifier_add,
   &modifier_sub,
   &modifier_max,
   &modifier_min,
   &modifier_mul,
-  &source_circles,
-  &source_random,
-  &source_sinwaves,
-  &source_plasma,
   &modifier_map_distort,
   &modifier_blur,
 };
@@ -230,23 +231,10 @@ extern "C" {
 
   void patchOpCodes(int opCodeLen, const uint8 *opCodes, vector<uint8> *out)   {
 
-    out->resize(opCodeLen + 9);
-    uint8 *mem = out->data();
-
-    // push eax
-    mem[0] = 0x50;
-    // lea eax, funcPtrs
-    mem[1] = 0x8d;
-    mem[2] = 0x05;
-    *(uint32 *)&mem[3] = (uint32)&funcPtrs[0];
-
-    memcpy(mem + 7, opCodes, opCodeLen);
-
-    // pop eax
-    mem[7 + opCodeLen + 0] = 0x58;
-
-    // ret
-    mem[7 + opCodeLen + 1] = 0xc3;
+    // set the correct address for out function pointers
+    out->resize(opCodeLen);
+    memcpy(out->data(), opCodes, opCodeLen);
+    *(uint32 *)&out->data()[3] = (uint32)&funcPtrs[0];
   }
 
   void printInt8(FILE *f, uint8 v, const char *prefix, const char *suffix)

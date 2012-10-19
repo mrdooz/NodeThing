@@ -20,22 +20,77 @@
 #endif
 
 static void *funcPtrs[] = {
+#if USE_SRC_SOLID
   &source_solid,
+#else
+  NULL,
+#endif
+#if USE_SRC_NOISE
   &source_noise,
-  &modifier_add,
-  &modifier_sub,
-  &modifier_max,
-  &modifier_min,
-  &modifier_mul,
+#else
+  NULL,
+#endif
+#if USE_SRC_CIRCLES
   &source_circles,
+#else
+  NULL,
+#endif
+#if USE_SRC_RANDOM
   &source_random,
+#else
+  NULL,
+#endif
+#if USE_SRC_SINEWAVES
   &source_sinwaves,
+#else
+  NULL,
+#endif
+#if USE_SRC_PLASMA
   &source_plasma,
+#else
+  NULL,
+#endif
+#if USE_MOD_ADD
+  &modifier_add,
+#else
+  NULL,
+#endif
+#if USE_MOD_SUB
+  &modifier_sub,
+#else
+  NULL,
+#endif
+#if USE_MOD_MAX
+  &modifier_max,
+#else
+  NULL,
+#endif
+#if USE_MOD_MIN
+  &modifier_min,
+#else
+  NULL,
+#endif
+#if USE_MOD_MUL
+  &modifier_mul,
+#else
+  NULL,
+#endif
+#if USE_MOD_DISTORT
   &modifier_map_distort,
+#else
+  NULL,
+#endif
+#if USE_MOD_BLUR
+  &modifier_blur,
+#else
+  NULL,
+#endif
 };
 
+#if USE_SRC_NOISE
 extern int gPerm[];
 extern Vector2 gGrad[];
+#endif
 
 extern Texture **gTextures;
 
@@ -273,15 +328,39 @@ void createMesh() {
   gMesh->UnlockIndexBuffer();
   gMesh->UnlockVertexBuffer();
 }
+#if 0
+D3DXMATRIX lookat(const D3DXVECTOR3 &eye, const D3DXVECTOR3 &at, const D3DXVECTOR3 &up) {
+/*
+  zaxis = normal(At - Eye)
+  xaxis = normal(cross(Up, zaxis))
+  yaxis = cross(zaxis, xaxis)
 
+  xaxis.x           yaxis.x           zaxis.x          0
+  xaxis.y           yaxis.y           zaxis.y          0
+  xaxis.z           yaxis.z           zaxis.z          0
+  -dot(xaxis, eye)  -dot(yaxis, eye)  -dot(zaxis, eye)  1
+*/
+  D3DXVECTOR3 xaxis, yaxis, zaxis, tmp;
+  D3DXVec3Normalize(&zaxis, &(at - eye));
+  D3DXVec3Normalize(&xaxis, D3DXVec3Cross(&xaxis, &up, &zaxis));
+  D3DXVec3Cross(&yaxis, &zaxis, &xaxis);
+
+  return D3DXMATRIX(
+    xaxis.x, yaxis.x, zaxis.x, 0,
+    xaxis.y, yaxis.y, zaxis.x, 0,
+    xaxis.z, yaxis.z, zaxis.x, 0,
+    -D3DXVec3Dot(&xaxis, &eye), -D3DXVec3Dot(&yaxis, &eye), -D3DXVec3Dot(&zaxis, &eye), 1);
+}
+#endif
 void __stdcall WinMainCRTStartup()
 {
+#if USE_SRC_NOISE
   for (int i = 0; i < 512; ++i)
     gPerm[i] = tRand() % 256;
 
   for (int i = 0; i < cNumGradients; ++i)
     gGrad[i] = normalize(Vector2(randf(-1.0f,1.0f), randf(-1.0f,1.0f)));
-
+#endif
 
   gD3D = Direct3DCreate9( D3D_SDK_VERSION );
   gHwnd = CreateWindow("static",0,WS_POPUP|WS_VISIBLE,0,0,xRes, yRes,0,0,0,0);
@@ -306,6 +385,7 @@ void __stdcall WinMainCRTStartup()
   D3DXMATRIX world, view, proj, viewProj;
   D3DXMatrixIdentity(&world);
   D3DXMatrixLookAtLH(&view, &D3DXVECTOR3(0,0,-4), &D3DXVECTOR3(0,0,0), &D3DXVECTOR3(0,1,0));
+  //view = lookat(D3DXVECTOR3(0,0,-4), D3DXVECTOR3(0,0,0), D3DXVECTOR3(0,1,0));
   D3DXMatrixPerspectiveFovLH(&proj, 45 * D3DX_PI / 180, 4/3.0f, 1, 1000);
   D3DXMatrixMultiply(&viewProj, &view,&proj);
   

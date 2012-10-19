@@ -17,9 +17,11 @@ static uint8 shiftAmount_argb_to_rgba[] = {16, 8, 0, 24};
 
 Texture **gTextures;
 
+#if USE_SRC_NOISE
 // Perlin noise variables
 int gPerm[512];
 Vector2 gGrad[cNumGradients];
+#endif
 
 Vector2 operator+(const Vector2 &a, const Vector2 &b) {
   return Vector2(a.x+b.x, a.y+b.y);
@@ -87,16 +89,9 @@ float bilinear(float *src, int width, int stride, float tx, float ty) {
   return lerp(v0, v1, ty);
 }
 
-enum BlendFunc {
-  kBlendAdd,
-  kBlendSub,
-  kBlendMul,
-  kBlendMin,
-  kBlendMax
-};
 
+#if USE_SRC_SOLID
 void __cdecl source_solid(int dstTexture, uint32 color_argb) {
-
   const Texture *texture = gTextures[dstTexture];
   float *p = (float *)texture->data;
   float rgba[4];
@@ -111,7 +106,9 @@ void __cdecl source_solid(int dstTexture, uint32 color_argb) {
   }
 
 }
+#endif
 
+#if USE_SRC_RANDOM
 void __cdecl source_random(int dstTexture, float scale, uint32 seed) {
 
   const Texture *texture = gTextures[dstTexture];
@@ -126,10 +123,11 @@ void __cdecl source_random(int dstTexture, float scale, uint32 seed) {
     _mm_store_ps(p, _mm_set_ps1(v));
     p += 4;
   }
-
   gRandomSeed = tmpSeed;
 }
+#endif
 
+#if USE_SRC_PLASMA
 static const int cGridSize[] = {0, (1<<1)+1, (1<<2)+1, (1<<3)+1, (1<<4)+1, (1<<5)+1, (1<<6)+1, (1<<7)+1, (1<<8)+1, (1<<9)+1};
 static float corners[4*513*513];
 
@@ -303,7 +301,9 @@ void __cdecl source_plasma(int dstTexture, float scale, int monochrome, int dept
   }
   gRandomSeed = tmpSeed;
 }
+#endif
 
+#if USE_SRC_SINEWAVES
 enum SinFunc {
   kFuncSinX,
   kFuncSinY,
@@ -374,7 +374,9 @@ void __cdecl source_sinwaves(int dstTexture, float scale, int func, int numSin, 
     }
   }
 }
+#endif
 
+#if USE_SRC_NOISE
 float perlin_noise(float x, float y) {
   // grid coordinates
   int gridX = ((int)x) & 0xff;
@@ -451,6 +453,9 @@ void source_turbulence(int dstTexture, int octaves, float scaleX, float scaleY, 
   }
 }
 */
+#endif
+
+#if USE_SRC_CIRCLES
 struct Circle {
   float x, y, radius, dummy;
 };
@@ -531,9 +536,18 @@ INSIDE_CIRCLE:
     }
   }
 }
+#endif
 
+#if USE_MOD_ADD || USE_MOD_SUB || USE_MOD_MUL || USE_MOD_MIN || USE_MOD_MAX
+enum BlendFunc {
+  kBlendAdd,
+  kBlendSub,
+  kBlendMul,
+  kBlendMin,
+  kBlendMax
+};
 
-void blend_inner(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2, BlendFunc fn) {
+void blend_inner(int dstTextureIdx, int srcTexture1Idx, int srcTexture2Idx, BlendFunc fn) {
 
   Texture *dstTexture = gTextures[dstTextureIdx];
   float *dst = dstTexture->data;
@@ -549,12 +563,9 @@ void blend_inner(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTex
 
   int len = dstTexture->width * dstTexture->height;
 
-  __m128 blend_a = _mm_set_ps1(blend1);
-  __m128 blend_b = _mm_set_ps1(blend2);
-
   for (int i = 0; i < len; ++i) {
-    __m128 tmp_a = _mm_mul_ps(_mm_load_ps(src1), blend_a);
-    __m128 tmp_b = _mm_mul_ps(_mm_load_ps(src2), blend_b);
+    __m128 tmp_a = _mm_load_ps(src1);
+    __m128 tmp_b = _mm_load_ps(src2);
     switch (fn) {
       case kBlendAdd: tmp_a = _mm_add_ps(tmp_a, tmp_b); break;
       case kBlendSub: tmp_a = _mm_sub_ps(tmp_a, tmp_b); break;
@@ -569,35 +580,51 @@ void blend_inner(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTex
     src2 += 4;
   }
 }
+#endif
 
-void __cdecl modifier_add(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2) {
-  blend_inner(dstTextureIdx, srcTexture1Idx, blend1, srcTexture2Idx, blend2, kBlendAdd);
+#if USE_MOD_ADD
+void __cdecl modifier_add(int dstTextureIdx, int srcTexture1Idx, int srcTexture2Idx) {
+  blend_inner(dstTextureIdx, srcTexture1Idx, srcTexture2Idx, kBlendAdd);
 }
+#endif
 
-void __cdecl modifier_sub(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2) {
-  blend_inner(dstTextureIdx, srcTexture1Idx, blend1, srcTexture2Idx, blend2, kBlendSub);
+#if USE_MOD_SUB
+void __cdecl modifier_sub(int dstTextureIdx, int srcTexture1Idx, int srcTexture2Idx) {
+  blend_inner(dstTextureIdx, srcTexture1Idx, srcTexture2Idx, kBlendSub);
 }
+#endif
 
-void __cdecl modifier_max(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2) {
-  blend_inner(dstTextureIdx, srcTexture1Idx, blend1, srcTexture2Idx, blend2, kBlendMax);
+#if USE_MOD_MAX
+void __cdecl modifier_max(int dstTextureIdx, int srcTexture1Idx, int srcTexture2Idx) {
+  blend_inner(dstTextureIdx, srcTexture1Idx, srcTexture2Idx, kBlendMax);
 }
+#endif
 
-void __cdecl modifier_min(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2) {
-  blend_inner(dstTextureIdx, srcTexture1Idx, blend1, srcTexture2Idx, blend2, kBlendMin);
+#if USE_MOD_MIN
+void __cdecl modifier_min(int dstTextureIdx, int srcTexture1Idx, int srcTexture2Idx) {
+  blend_inner(dstTextureIdx, srcTexture1Idx, srcTexture2Idx, kBlendMin);
 }
+#endif
 
-void __cdecl modifier_mul(int dstTextureIdx, int srcTexture1Idx, float blend1, int srcTexture2Idx, float blend2) {
-  blend_inner(dstTextureIdx, srcTexture1Idx, blend1, srcTexture2Idx, blend2, kBlendMul);
+#if USE_MOD_MUL
+void __cdecl modifier_mul(int dstTextureIdx, int srcTexture1Idx, int srcTexture2Idx) {
+  blend_inner(dstTextureIdx, srcTexture1Idx, srcTexture2Idx, kBlendMul);
 }
+#endif
 
+#if USE_MOD_INVERT
 void __cdecl modifier_invert(int dstTextureIdx, int srcTextureIdx) {
 
 }
+#endif
 
+#if USE_MOD_GRAYSCALE
 void __cdecl modifier_grayscale(int dstTextureIdx, int srcTextureIdx) {
 
 }
+#endif
 
+#if USE_MOD_DISTORT
 enum DistortChannels {
   kChannelRG,
   kChannelRB,
@@ -653,7 +680,9 @@ void __cdecl modifier_map_distort(int dstTextureIdx, int srcTextureIdx, int dist
    }
   }
 }
+#endif
 
+#if USE_MOD_BLUR
 void prepare_scratch_buffer(Texture *texture, int scanLine, bool horizontal, TextureMode mode) {
 
   int w = texture->width;
@@ -708,24 +737,18 @@ void __cdecl modifier_blur(int dstTextureIdx, int srcTextureIdx, float blurRadiu
   int m = (int)blurRadius;          // integer part of radius
   float alpha = blurRadius - m;     // fractional part
 
-  bool horizontal = dir == kBlurHoriz;
-
   const int numPasses = 3;
-
   Texture *inputTexture = srcTexture;
 
-  // todo, move the pass loop to the horizontal step
   for (int pass = 0; pass < numPasses; ++pass) {
-
-    for (int outer = 0; outer < (dir == kBlurBoth ? 2 : 1); ++outer) {
-
+    if (dir == kBlurHoriz || dir == kBlurBoth) {
       for (int i = 0; i < height; ++i) {
 
-        prepare_scratch_buffer(inputTexture, i, horizontal, kTextureClamp);
+        prepare_scratch_buffer(inputTexture, i, true, mode);
         float *scratch = inputTexture->scratch;
 
         D3DXVECTOR4 *x = (D3DXVECTOR4 *)(scratch + width * 4);
-        D3DXVECTOR4 *y = (D3DXVECTOR4 *)(horizontal ? &dst[i*width*4] : &dst[i*4]);
+        D3DXVECTOR4 *y = (D3DXVECTOR4 *)&dst[i*width*4];
 
         // compute sum at first pixel
         D3DXVECTOR4 sum = x[0];
@@ -740,12 +763,39 @@ void __cdecl modifier_blur(int dstTextureIdx, int srcTextureIdx, float blurRadiu
 
           sum += lerp(x[j+m+1], x[j+m+2], alpha);
           sum -= lerp(x[j-m], x[j-m-1], alpha);
-          y += horizontal ? 1 : width;
+          y++;
         }
       }
+      inputTexture = inputTexture == srcTexture ? dstTexture : srcTexture;
+    }
 
-      horizontal = !horizontal;
+    if (dir == kBlurVert || dir == kBlurBoth) {
+      for (int i = 0; i < height; ++i) {
+
+        prepare_scratch_buffer(inputTexture, i, false, mode);
+        float *scratch = inputTexture->scratch;
+
+        D3DXVECTOR4 *x = (D3DXVECTOR4 *)(scratch + width * 4);
+        D3DXVECTOR4 *y = (D3DXVECTOR4 *)(&dst[i*4]);
+
+        // compute sum at first pixel
+        D3DXVECTOR4 sum = x[0];
+        for (int j = 1; j <= m; ++j)
+          sum += x[-j] + x[j];
+        sum += alpha * (x[-m-1] + x[m+1]);
+
+        for (int j = 0; j  < width; ++j) {
+
+          // generate output pixel, and update running sum for next pixel
+          *y = sum * scale;
+
+          sum += lerp(x[j+m+1], x[j+m+2], alpha);
+          sum -= lerp(x[j-m], x[j-m-1], alpha);
+          y += width;
+        }
+      }
       inputTexture = inputTexture == srcTexture ? dstTexture : srcTexture;
     }
   }
 }
+#endif

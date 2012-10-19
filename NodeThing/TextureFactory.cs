@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -28,24 +29,22 @@ namespace NodeThing
         {
             initTextureLib(_completedCallback);
 
-            AddNodeName("Solid", 0);
-            AddNodeName("Noise", 1);
+            // sources
+            AddNodeName("Solid", 0, "USE_SRC_SOLID");
+            AddNodeName("Noise", 1, "USE_SRC_NOISE");
+            AddNodeName("Circles", 2, "USE_SRC_CIRCLES");
+            AddNodeName("Random", 3, "USE_SRC_RANDOM");
+            AddNodeName("Sinewaves", 4, "USE_SRC_SINEWAVES");
+            AddNodeName("Plasma", 5, "USE_SRC_PLASMA");
 
-            AddNodeName("Add", 2);
-            AddNodeName("Sub", 3);
-            AddNodeName("Max", 4);
-            AddNodeName("Min", 5);
-
-            AddNodeName("Mul", 6);
-
-            AddNodeName("Circles", 7);
-            AddNodeName("Random", 8);
-            AddNodeName("Sinwaves", 9);
-            AddNodeName("Plasma", 10);
-
-            AddNodeName("Distort", 11);
-
-            AddNodeName("Blur", 12);
+            // modifiers
+            AddNodeName("Add", 6, "USE_MOD_ADD");
+            AddNodeName("Sub", 7, "USE_MOD_SUB");
+            AddNodeName("Max", 8, "USE_MOD_MAX");
+            AddNodeName("Min", 9, "USE_MOD_MIN");
+            AddNodeName("Mul", 10, "USE_MOD_MUL");
+            AddNodeName("Distort", 11, "USE_MOD_DISTORT");
+            AddNodeName("Blur", 12, "USE_MOD_BLUR");
         }
 
         public override Node CreateNode(string name, Point pos)
@@ -116,7 +115,6 @@ namespace NodeThing
                 node.AddInput("A", Connection.Type.Texture);
                 node.AddInput("B", Connection.Type.Texture);
                 node.SetOutput("Output", Connection.Type.Texture);
-                node.AddProperty("Blend", new Tuple<float, float>(1, 1), new Tuple<float, float>(-5, -5), new Tuple<float, float>(5, 5));
             }
 
             if (name == "Distort") {
@@ -173,11 +171,8 @@ namespace NodeThing
 
                 var srcTexture1 = step.InputTextures[0];
                 var srcTexture2 = step.InputTextures[1];
-                // (dst, src1, scale 1, src2, scale 2)
-                var blend = node.GetProperty<Tuple<float, float>>("Blend");
-                pp.AddPushFloat32(blend.Item2);
+                // (dst, src1, src2)
                 pp.AddPushUInt32((UInt32)srcTexture2);
-                pp.AddPushFloat32(blend.Item1);
                 pp.AddPushUInt32((UInt32)srcTexture1);
                 pp.AddPushUInt32((UInt32)dstTexture);
             }
@@ -270,6 +265,18 @@ namespace NodeThing
         {
             var opCodes = new List<byte>();
 
+            // push eax
+            opCodes.Add(0x50);
+
+            // lea eax, funcPtrs
+            opCodes.Add(0x8d);
+            opCodes.Add(0x05);
+
+            opCodes.Add(0x90);
+            opCodes.Add(0x90);
+            opCodes.Add(0x90);
+            opCodes.Add(0x90);
+
             foreach (var s in seq.Sequence) {
                 // push eax
                 opCodes.Add(0x50);
@@ -280,6 +287,13 @@ namespace NodeThing
                 // pop eax
                 opCodes.Add(0x58);
             }
+
+            // pop eax
+            opCodes.Add(0x58);
+
+            // ret
+            opCodes.Add(0xc3);
+
             return opCodes;
         }
 
@@ -293,6 +307,51 @@ namespace NodeThing
             renderTexture(displayHandle, key, seq.Size.Width, seq.Size.Height, seq.NumTextures, finalTexture, seq.Name, opCodes.Count, opCodes.ToArray());
         }
 
+        /*
+          void printInt8(FILE *f, uint8 v, const char *prefix, const char *suffix)
+          {
+            fprintf(f, "%s0x%.2x%s", prefix ? prefix : "", v & 0xff, suffix ? suffix : "");
+          }
+
+          void printInt16(FILE *f, uint16 v, const char *prefix, const char *suffix)
+          {
+            fprintf(f, "%s0x%.2x, 0x%.2x%s", prefix ? prefix : "", v & 0xff, (v >> 8) & 0xff, suffix ? suffix : "");
+          }
+
+          void printInt32(FILE *f, int v, const char *prefix, const char *suffix)
+          {
+            fprintf(f, "%s0x%.2x, 0x%.2x, 0x%.2x, 0x%.2x%s", prefix ? prefix : "", v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, (v >> 24) & 0xff, suffix ? suffix : "");
+          }
+
+          __declspec(dllexport) void generateCode(int width, int height, int numTextures, int finalTexture, const char *name, int opCodeLen, const uint8 *opCodes, const char *filename) {
+
+            vector<uint8> mem;
+            patchOpCodes(opCodeLen, opCodes, &mem);
+
+            ASSERT(width < 65536 && height < 65536);
+            ASSERT(numTextures < 256 && finalTexture < 256);
+
+            FILE *f = fopen(filename, "at");
+            fseek(f, 0, SEEK_END);
+            fprintf(f, "unsigned char %s[%d] = {\n", name ? name : "dummy", 2*2+2*1+mem.size());
+            printInt16(f, width, "\t", ", ");
+            printInt16(f, height, "", ", // width, height\n");
+
+            printInt8(f, numTextures, "\t", ", ");
+            printInt8(f, finalTexture, "", ", // num textures, final texture\n\t");
+
+            for (size_t i = 0; i < mem.size(); ++i) {
+              fprintf(f, "0x%.2x%s%s", mem[i], 
+                i != mem.size()-1 ? "," : "", 
+                (i & 0xf) == 0xf ? "\n\t" : "");
+            }
+
+            fprintf(f, "\n};\n\n");
+
+            fclose(f);
+          }
+        */
+
         public override void GenerateCode(GeneratorSequence seq, string filename)
         {
             var opCodes = SequenceToOpCodes(seq);
@@ -300,7 +359,11 @@ namespace NodeThing
                 return;
 
             var finalTexture = seq.Sequence.Last().DstTextureIdx;
-            generateCode(seq.Size.Width, seq.Size.Height, seq.NumTextures, finalTexture, seq.Name, opCodes.Count, opCodes.ToArray(), filename);
+
+            using (var sr = File.AppendText(filename)) {
+            }
+
+            //generateCode(seq.Size.Width, seq.Size.Height, seq.NumTextures, finalTexture, seq.Name, opCodes.Count, opCodes.ToArray(), filename);
             
         }
 
